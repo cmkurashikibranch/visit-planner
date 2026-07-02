@@ -100,7 +100,7 @@ test('copyFromPrevMonth：存在しない日はプール行き（1/31→2月）'
   assert.deepStrictEqual(r.pooled, [1]);
 });
 
-test('copyFromPrevMonth：予약済み利用者は除外・予約枠との衝突はプール行き', () => {
+test('copyFromPrevMonth：予約済み利用者は除外・予約枠との衝突はプール行き', () => {
   const users = [
     { id: 1, name: '山田', ngDays: [], memo: '' },
     { id: 2, name: '佐藤', ngDays: [], memo: '' }

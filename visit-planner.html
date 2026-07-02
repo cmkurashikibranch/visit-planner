@@ -523,7 +523,7 @@ function openDetail(date, slot, anchorEl) {
   pop.id = 'detail-popover';
   pop.innerHTML = '<div class="name">' + escapeHtml(user.name) + 'さん</div>' +
     '<div class="rows">' +
-    '<div>時刻: <input type="time" id="dp-time" value="' + p.time + '"></div>' +
+    '<div>時刻: <input type="time" id="dp-time" value="' + escapeHtml(p.time) + '"></div>' +
     (user.memo ? '<div style="color:var(--text-2)">' + escapeHtml(user.memo) + '</div>' : '') +
     '<div><button class="btn" id="dp-move">移動</button> ' +
     '<button class="btn" id="dp-pool">プールに戻す</button></div>' +
@@ -552,6 +552,7 @@ function closePopover() {
 var editingUserId = null;
 
 function openUsersModal() {
+  closePopover();
   editingUserId = null;
   renderUsersModal();
   document.getElementById('users-modal').style.display = 'flex';
@@ -642,6 +643,7 @@ function importJson(file) {
 
 /* ===== 月ナビ ===== */
 function openMonth(y, m) {
+  closePopover();
   if (m < 1) { y--; m = 12; }
   if (m > 12) { y++; m = 1; }
   viewYear = y; viewMonth = m;

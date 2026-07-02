@@ -5,11 +5,86 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>訪問調整</title>
 <style>
-/* CSS は Task 3 で追加 */
+:root {
+  --bg: #F8FAFC; --card: #FFFFFF; --accent: #2563EB;
+  --text: #0F172A; --text-2: #64748B; --line: #E2E8F0;
+  --visit: #0C9E8E; --done-bg: #F1F5F9; --ng: #E03F3F; --warn-bg: #FEF3C7;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text);
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; font-size: 14px; }
+header { display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+  background: var(--card); border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 10; }
+header .month-nav { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 16px; }
+header button { cursor: pointer; border: 1px solid var(--line); background: var(--card);
+  border-radius: 8px; padding: 4px 10px; font-size: 14px; }
+#counter { color: var(--text-2); }
+#counter .num { color: var(--accent); font-weight: 700; }
+#banner { display: none; padding: 6px 12px; background: var(--warn-bg); font-size: 13px; }
+main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
+  padding: 10px; height: calc(100vh - 49px); }
+/* プール */
+#pool { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 8px; display: flex; flex-direction: column; min-height: 0; }
+#pool h2 { font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
+#pool-search { width: 100%; padding: 5px 8px; border: 1px solid var(--line);
+  border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+#pool-list { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.piece { background: var(--card); border: 1px solid var(--visit); border-left: 4px solid var(--visit);
+  border-radius: 8px; padding: 4px 6px; cursor: pointer; font-size: 13px; user-select: none; }
+.piece .ng-badge { color: var(--ng); font-size: 11px; margin-left: 4px; }
+.piece.selected { outline: 2px solid var(--accent); }
+/* カレンダー */
+#calendar { overflow-y: auto; min-height: 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-dow { text-align: center; font-size: 11px; color: var(--text-2); padding: 2px 0; }
+.cal-cell { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 2px; min-height: 84px; }
+.cal-cell.other-month { background: transparent; border: none; }
+.cal-cell .day-head { display: flex; justify-content: space-between; font-size: 11px;
+  color: var(--text-2); padding: 0 2px; }
+.cal-cell .day-head .fill { color: var(--accent); }
+.cal-cell.today .day-num { color: var(--accent); font-weight: 700; }
+.cal-slot { border: 1px dashed var(--line); border-radius: 6px; margin-top: 2px;
+  min-height: 22px; font-size: 12px; display: flex; align-items: center;
+  padding: 1px 4px; color: var(--text-2); }
+.cal-slot .slot-label { opacity: .45; font-size: 11px; }
+.cal-slot.filled { border-style: solid; border-color: var(--visit); color: var(--text);
+  justify-content: space-between; cursor: pointer; }
+.cal-slot.filled.done { background: var(--done-bg); color: var(--text-2); border-color: var(--line); }
+.cal-slot .check { min-width: 24px; text-align: center; cursor: pointer; border-radius: 4px; }
+.cal-slot .check:hover { background: var(--done-bg); }
+.cal-slot .warn { color: var(--ng); }
+.cal-slot .next-badge { font-size: 10px; color: var(--text-2); }
+.cal-slot.drop-ok { outline: 2px solid var(--accent); background: #EFF6FF; }
+.cal-cell.ng-col { background: #FEF2F2; }
 </style>
 </head>
 <body>
-<div id="app"></div>
+<header>
+  <div class="month-nav">
+    <button id="prev-month">◀</button>
+    <span id="month-title">2026年7月</span>
+    <button id="next-month">▶</button>
+  </div>
+  <div id="counter">未配置: <span class="num" id="unplaced-n">0</span>名 / 全体 <span id="total-n">0</span>名</div>
+  <div style="flex:1"></div>
+  <button id="open-users">👥 利用者管理</button>
+</header>
+<div id="banner"></div>
+<div id="mode-banner" style="display:none"></div>
+<main>
+  <aside id="pool">
+    <h2>未配置プール</h2>
+    <input id="pool-search" type="text" placeholder="🔍 名前で検索">
+    <div id="pool-list"></div>
+  </aside>
+  <section id="calendar">
+    <div class="cal-grid" id="cal-grid"></div>
+  </section>
+</main>
+<div id="toast" style="display:none"></div>
 <script>
 'use strict';
 /* CORE:START */
@@ -141,7 +216,155 @@ function sanitizeData(raw) {
 }
 /* CORE:END */
 
-/* UI層は Task 3 以降で追加 */
+/* ===== ストレージ ===== */
+var LS_KEY = 'visit-planner-v1';
+function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+function lsSet(key, val) { try { localStorage.setItem(key, val); return true; } catch (e) { return false; } }
+
+var appData = null;
+var viewYear = 0, viewMonth = 0; // month: 1-12
+var dndState = null;   // Task 6
+var selectMode = null; // Task 5 { userId, source }
+var reserveMode = null; // Task 7 { userId, returnYear, returnMonth }
+
+function loadData() {
+  var rawStr = lsGet(LS_KEY);
+  var raw = null;
+  var parseFailed = false;
+  if (rawStr !== null) {
+    try { raw = JSON.parse(rawStr); } catch (e) { parseFailed = true; }
+  }
+  var r = sanitizeData(raw);
+  appData = r.data;
+  if (parseFailed) showBanner('⚠ 保存データを読み込めなかったため、初期状態で起動しました');
+  else if (r.warned) showBanner('⚠ 一部のデータが壊れていたため修復しました');
+}
+
+function saveData() {
+  if (!lsSet(LS_KEY, JSON.stringify(appData))) {
+    showBanner('⚠ 保存に失敗しました（容量超過の可能性）。JSONエクスポートでバックアップしてください');
+  }
+}
+
+function showBanner(msg) {
+  var el = document.getElementById('banner');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+/* ===== ヘルパー ===== */
+function curMonthKey() { return viewYear + '-' + pad2(viewMonth); }
+function curList() { return appData.placements[curMonthKey()] || []; }
+function setCurList(list) { appData.placements[curMonthKey()] = list; }
+function userById(id) {
+  for (var i = 0; i < appData.users.length; i++) if (appData.users[i].id === id) return appData.users[i];
+  return undefined;
+}
+function todayStr() {
+  var t = new Date();
+  return makeDateStr(t.getFullYear(), t.getMonth() + 1, t.getDate());
+}
+var DOW_LABELS = ['日', '月', '火', '水', '木', '金', '土'];
+function ngBadgeText(user) {
+  if (!user.ngDays.length) return '';
+  return '⚠' + user.ngDays.map(function (d) { return DOW_LABELS[d]; }).join('') + 'NG';
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+/* ===== 描画 ===== */
+function renderAll() {
+  if (dndState) return; // D&D中の再描画ガード
+  renderHeader();
+  renderPool();
+  renderCalendar();
+}
+
+function renderHeader() {
+  document.getElementById('month-title').textContent = viewYear + '年' + viewMonth + '月';
+  document.getElementById('unplaced-n').textContent = countUnplaced(appData.users, curList());
+  document.getElementById('total-n').textContent = appData.users.length;
+}
+
+function renderPool() {
+  var listEl = document.getElementById('pool-list');
+  var q = document.getElementById('pool-search').value.trim();
+  var list = curList();
+  var unplaced = appData.users
+    .filter(function (u) { return !isPlacedInMonth(list, u.id); })
+    .filter(function (u) { return !q || u.name.indexOf(q) !== -1; })
+    .sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+  if (!appData.users.length) {
+    listEl.innerHTML = '<div style="color:var(--text-2);font-size:12px;padding:8px">👥 利用者管理から登録してください</div>';
+    return;
+  }
+  listEl.innerHTML = unplaced.map(function (u) {
+    return '<div class="piece" data-user-id="' + u.id + '">' + escapeHtml(u.name) + 'さん' +
+      (u.ngDays.length ? '<span class="ng-badge">' + ngBadgeText(u) + '</span>' : '') + '</div>';
+  }).join('');
+}
+
+function renderCalendar() {
+  var grid = document.getElementById('cal-grid');
+  var list = curList();
+  var today = todayStr();
+  var first = new Date(viewYear, viewMonth - 1, 1).getDay(); // 月初の曜日
+  var days = daysInMonth(viewYear, viewMonth);
+  var html = DOW_LABELS.map(function (l) { return '<div class="cal-dow">' + l + '</div>'; }).join('');
+  for (var i = 0; i < first; i++) html += '<div class="cal-cell other-month"></div>';
+  for (var d = 1; d <= days; d++) {
+    var date = makeDateStr(viewYear, viewMonth, d);
+    var fill = 0;
+    var slots = '';
+    for (var s = 1; s <= 3; s++) {
+      var p = null;
+      for (var j = 0; j < list.length; j++) {
+        if (list[j].date === date && list[j].slot === s) { p = list[j]; break; }
+      }
+      if (p) {
+        fill++;
+        var u = userById(p.userId);
+        var nextBadge = ''; // Task 7 で来月予約バッジを差し込む
+        slots += '<div class="cal-slot filled' + (p.done ? ' done' : '') + '" data-date="' + date + '" data-slot="' + s + '">' +
+          '<span class="piece-body" data-date="' + date + '" data-slot="' + s + '">' +
+          (isNgDay(u, date) ? '<span class="warn">⚠</span>' : '') +
+          escapeHtml(u.name) + nextBadge + '</span>' +
+          '<span class="check" data-date="' + date + '" data-slot="' + s + '">' + (p.done ? '✓' : '○') + '</span></div>';
+      } else {
+        slots += '<div class="cal-slot" data-date="' + date + '" data-slot="' + s + '">' +
+          '<span class="slot-label">' + ['①', '②', '③'][s - 1] + '</span></div>';
+      }
+    }
+    html += '<div class="cal-cell' + (date === today ? ' today' : '') + '" data-date="' + date + '">' +
+      '<div class="day-head"><span class="day-num">' + d + '</span><span class="fill">' + fill + '/3</span></div>' +
+      slots + '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+/* ===== 月ナビ ===== */
+function openMonth(y, m) {
+  if (m < 1) { y--; m = 12; }
+  if (m > 12) { y++; m = 1; }
+  viewYear = y; viewMonth = m;
+  // Task 8: ここに月替わりダイアログの判定を差し込む
+  renderAll();
+}
+
+/* ===== 初期化 ===== */
+function init() {
+  loadData();
+  var t = new Date();
+  viewYear = t.getFullYear(); viewMonth = t.getMonth() + 1;
+  document.getElementById('prev-month').onclick = function () { openMonth(viewYear, viewMonth - 1); };
+  document.getElementById('next-month').onclick = function () { openMonth(viewYear, viewMonth + 1); };
+  document.getElementById('pool-search').oninput = function () { renderPool(); };
+  renderAll();
+}
+init();
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { pad2: pad2, makeDateStr: makeDateStr };

@@ -77,6 +77,18 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
   border-radius: 8px; padding: 5px 12px; font-size: 13px; }
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 .btn.danger { color: var(--ng); }
+#mode-banner { padding: 6px 12px; background: #EFF6FF; color: var(--accent);
+  font-size: 13px; display: flex; align-items: center; gap: 10px; }
+#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: var(--text); color: #fff; border-radius: 10px; padding: 8px 14px;
+  font-size: 13px; display: flex; gap: 12px; z-index: 200; }
+#toast button { background: none; border: none; color: #93C5FD; cursor: pointer; font-size: 13px; }
+.popover { position: absolute; background: var(--card); border: 1px solid var(--line);
+  border-radius: 12px; padding: 10px; box-shadow: 0 8px 24px rgba(15,23,42,.15);
+  z-index: 150; width: 220px; font-size: 13px; }
+.popover .name { font-weight: 700; margin-bottom: 6px; }
+.popover input[type=time] { padding: 4px; border: 1px solid var(--line); border-radius: 6px; }
+.popover .rows { display: flex; flex-direction: column; gap: 6px; }
 </style>
 </head>
 <body>
@@ -385,6 +397,157 @@ function renderCalendar() {
   grid.innerHTML = html;
 }
 
+/* ===== アンドゥ ===== */
+var undoSnapshot = null;
+var toastTimer = null;
+
+function snapshotUndo() {
+  undoSnapshot = JSON.stringify(appData.placements);
+}
+function showToast(label) {
+  var el = document.getElementById('toast');
+  el.innerHTML = escapeHtml(label) + '<button id="undo-btn">元に戻す</button>';
+  el.style.display = 'flex';
+  document.getElementById('undo-btn').onclick = function () {
+    if (undoSnapshot) {
+      appData.placements = JSON.parse(undoSnapshot);
+      undoSnapshot = null;
+      saveData();
+      renderAll();
+    }
+    hideToast();
+  };
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function hideToast() { document.getElementById('toast').style.display = 'none'; }
+
+/* ===== 配置・移動の共通経路（NG確認込み） ===== */
+function findPlacement(list, date, slot) {
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].date === date && list[i].slot === slot) return list[i];
+  }
+  return null;
+}
+
+function confirmNg(user, date, cb) {
+  if (isNgDay(user, date)) {
+    var ok = confirm('⚠ ' + DOW_LABELS[dayOfWeek(date)] + '曜NGの方ですが配置しますか？');
+    cb(ok);
+  } else { cb(true); }
+}
+
+function tryPlace(userId, date, slot) {
+  var user = userById(userId);
+  var mk = monthKeyOf(date);
+  var list = appData.placements[mk] || [];
+  if (!isSlotFree(list, date, slot) || isPlacedInMonth(list, userId)) return;
+  confirmNg(user, date, function (ok) {
+    if (!ok) { renderAll(); return; }
+    snapshotUndo();
+    var r = addPlacement(list, userId, date, slot, SLOT_TIMES[slot]);
+    if (!r.ok) { renderAll(); return; }
+    appData.placements[mk] = r.list;
+    saveData();
+    var afterReserve = consumeReserveMode(userId, date); // Task 7 で定義（それまではダミー）
+    renderAll();
+    if (!afterReserve) showToast(user.name + 'さんを ' + Number(date.slice(8, 10)) + '日' + ['①', '②', '③'][slot - 1] + ' に配置しました');
+  });
+}
+
+function tryMove(source, target) {
+  var list = curList();
+  var p = findPlacement(list, source.date, source.slot);
+  if (!p) return;
+  if (!isSlotFree(list.filter(function (x) { return x !== p; }), target.date, target.slot)) return;
+  var user = userById(p.userId);
+  confirmNg(user, target.date, function (ok) {
+    if (!ok) { renderAll(); return; }
+    snapshotUndo();
+    var r = movePlacement(list, source, target);
+    if (!r.ok) { renderAll(); return; }
+    setCurList(r.list);
+    saveData();
+    renderAll();
+    showToast(user.name + 'さんを ' + Number(target.date.slice(8, 10)) + '日に移動しました');
+  });
+}
+
+function returnToPool(date, slot) {
+  var list = curList();
+  var p = findPlacement(list, date, slot);
+  if (!p) return;
+  var user = userById(p.userId);
+  snapshotUndo();
+  setCurList(list.filter(function (x) { return x !== p; }));
+  saveData();
+  closePopover();
+  renderAll();
+  showToast(user.name + 'さんをプールに戻しました');
+}
+
+/* Task 7 で本実装。それまで常に false を返すダミー */
+function consumeReserveMode(userId, date) { return false; }
+
+/* ===== クリック配置（選択モード） ===== */
+function enterSelectMode(userId, source) {
+  selectMode = { userId: userId, source: source };
+  var user = userById(userId);
+  var el = document.getElementById('mode-banner');
+  el.innerHTML = (source === 'pool' ? '配置' : '移動') + 'モード：' + escapeHtml(user.name) +
+    'さんの枠をクリックしてください <button class="btn" id="select-cancel">キャンセル</button>';
+  el.style.display = 'flex';
+  document.getElementById('select-cancel').onclick = exitSelectMode;
+  renderAll();
+  highlightSelected();
+}
+function exitSelectMode() {
+  selectMode = null;
+  document.getElementById('mode-banner').style.display = 'none';
+  renderAll();
+}
+function highlightSelected() {
+  if (!selectMode) return;
+  var el = document.querySelector('#pool-list .piece[data-user-id="' + selectMode.userId + '"]');
+  if (el) el.classList.add('selected');
+}
+
+/* ===== 詳細ポップオーバー ===== */
+function openDetail(date, slot, anchorEl) {
+  closePopover();
+  var p = findPlacement(curList(), date, slot);
+  if (!p) return;
+  var user = userById(p.userId);
+  var pop = document.createElement('div');
+  pop.className = 'popover';
+  pop.id = 'detail-popover';
+  pop.innerHTML = '<div class="name">' + escapeHtml(user.name) + 'さん</div>' +
+    '<div class="rows">' +
+    '<div>時刻: <input type="time" id="dp-time" value="' + p.time + '"></div>' +
+    (user.memo ? '<div style="color:var(--text-2)">' + escapeHtml(user.memo) + '</div>' : '') +
+    '<div><button class="btn" id="dp-move">移動</button> ' +
+    '<button class="btn" id="dp-pool">プールに戻す</button></div>' +
+    '<div style="text-align:right"><button class="btn" id="dp-close">閉じる</button></div></div>';
+  document.body.appendChild(pop);
+  var rect = anchorEl.getBoundingClientRect();
+  pop.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
+  pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  document.getElementById('dp-time').onchange = function (e) {
+    p.time = e.target.value || p.time;
+    saveData();
+  };
+  document.getElementById('dp-move').onclick = function () {
+    closePopover();
+    enterSelectMode(p.userId, { date: date, slot: slot });
+  };
+  document.getElementById('dp-pool').onclick = function () { returnToPool(date, slot); };
+  document.getElementById('dp-close').onclick = closePopover;
+}
+function closePopover() {
+  var el = document.getElementById('detail-popover');
+  if (el) el.remove();
+}
+
 /* ===== 利用者管理 ===== */
 var editingUserId = null;
 
@@ -508,6 +671,30 @@ function init() {
   document.getElementById('import-file').onchange = function (e) {
     if (e.target.files[0]) importJson(e.target.files[0]);
     e.target.value = '';
+  };
+  document.getElementById('pool-list').onclick = function (e) {
+    var piece = e.target.closest('.piece');
+    if (!piece) return;
+    var uid = Number(piece.dataset.userId);
+    if (selectMode && selectMode.userId === uid) { exitSelectMode(); return; }
+    enterSelectMode(uid, 'pool');
+  };
+  document.getElementById('cal-grid').onclick = function (e) {
+    var check = e.target.closest('.check');
+    if (check) return; // ✓は Task 7 で処理
+    var slotEl = e.target.closest('.cal-slot');
+    if (!slotEl) { closePopover(); return; }
+    var date = slotEl.dataset.date, slot = Number(slotEl.dataset.slot);
+    var filled = slotEl.classList.contains('filled');
+    if (selectMode) {
+      if (filled) return; // 埋まった枠は受け付けない
+      var sm = selectMode;
+      exitSelectMode();
+      if (sm.source === 'pool') tryPlace(sm.userId, date, slot);
+      else tryMove(sm.source, { date: date, slot: slot });
+    } else if (filled) {
+      openDetail(date, slot, slotEl);
+    }
   };
   renderAll();
 }

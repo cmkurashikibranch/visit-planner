@@ -333,6 +333,7 @@ function renderAll() {
   renderHeader();
   renderPool();
   renderCalendar();
+  attachDnd();
 }
 
 function renderHeader() {
@@ -395,6 +396,92 @@ function renderCalendar() {
       slots + '</div>';
   }
   grid.innerHTML = html;
+}
+
+/* ===== D&D（PC専用） ===== */
+var pieceDragging = false;
+var pendingDrop = null;
+
+function isTouchDevice() {
+  return window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
+}
+
+function attachDnd() {
+  if (isTouchDevice()) return;
+  // プールのピース
+  document.querySelectorAll('#pool-list .piece').forEach(function (el) {
+    el.draggable = true;
+    el.addEventListener('dragstart', function (e) {
+      dndState = { userId: Number(el.dataset.userId), source: 'pool' };
+      pieceDragging = true;
+      markNgColumns(dndState.userId);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', onDragEnd);
+  });
+  // 配置済みピース
+  document.querySelectorAll('.cal-slot.filled').forEach(function (el) {
+    el.draggable = true;
+    el.addEventListener('dragstart', function (e) {
+      var p = findPlacement(curList(), el.dataset.date, Number(el.dataset.slot));
+      if (!p) return;
+      dndState = { userId: p.userId, source: { date: el.dataset.date, slot: Number(el.dataset.slot) } };
+      pieceDragging = true;
+      markNgColumns(p.userId);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', onDragEnd);
+  });
+  // ドロップ先：空き枠
+  document.querySelectorAll('.cal-slot:not(.filled)').forEach(function (el) {
+    el.addEventListener('dragover', function (e) { if (dndState) { e.preventDefault(); el.classList.add('drop-ok'); } });
+    el.addEventListener('dragleave', function () { el.classList.remove('drop-ok'); });
+    el.addEventListener('drop', function (e) {
+      e.preventDefault();
+      if (!dndState) return;
+      pendingDrop = { state: dndState, date: el.dataset.date, slot: Number(el.dataset.slot), toPool: false };
+      resolveDrop();
+    });
+  });
+}
+
+function resolveDrop() {
+  // pendingDropに退避済み → dndStateリセット＆ハイライト全消去を同期で完了
+  var pd = pendingDrop;
+  pendingDrop = null;
+  dndState = null;
+  clearNgColumns();
+  document.querySelectorAll('.drop-ok').forEach(function (el) { el.classList.remove('drop-ok'); });
+  setTimeout(function () { // NG確認confirmはdropハンドラの外へ逃す
+    if (pd.toPool) {
+      returnToPool(pd.state.source.date, pd.state.source.slot);
+    } else if (pd.state.source === 'pool') {
+      tryPlace(pd.state.userId, pd.date, pd.slot);
+    } else {
+      tryMove(pd.state.source, { date: pd.date, slot: pd.slot });
+    }
+  }, 0);
+}
+
+function onDragEnd() {
+  // drop不成立（枠外リリース等）の後始末
+  dndState = null;
+  clearNgColumns();
+  document.querySelectorAll('.drop-ok').forEach(function (el) { el.classList.remove('drop-ok'); });
+  document.getElementById('pool').style.outline = '';
+  setTimeout(function () { pieceDragging = false; }, 0);
+  renderAll();
+}
+
+function markNgColumns(userId) {
+  var user = userById(userId);
+  if (!user || !user.ngDays.length) return;
+  document.querySelectorAll('.cal-cell[data-date]').forEach(function (el) {
+    if (user.ngDays.indexOf(dayOfWeek(el.dataset.date)) !== -1) el.classList.add('ng-col');
+  });
+}
+function clearNgColumns() {
+  document.querySelectorAll('.ng-col').forEach(function (el) { el.classList.remove('ng-col'); });
 }
 
 /* ===== アンドゥ ===== */
@@ -698,6 +785,19 @@ function init() {
       openDetail(date, slot, slotEl);
     }
   };
+  // ドロップ先：プール（配置済み→未配置に戻す） — 1回だけ登録
+  var pool = document.getElementById('pool');
+  pool.addEventListener('dragover', function (e) {
+    if (dndState && dndState.source !== 'pool') { e.preventDefault(); pool.style.outline = '2px solid var(--accent)'; }
+  });
+  pool.addEventListener('dragleave', function () { pool.style.outline = ''; });
+  pool.addEventListener('drop', function (e) {
+    e.preventDefault();
+    pool.style.outline = '';
+    if (!dndState || dndState.source === 'pool') return;
+    pendingDrop = { state: dndState, toPool: true };
+    resolveDrop();
+  });
   renderAll();
 }
 init();

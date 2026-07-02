@@ -468,6 +468,7 @@ function importJson(file) {
     if (!confirm('現在のデータをインポート内容で置き換えます。よろしいですか？')) return;
     var r = sanitizeData(raw);
     appData = r.data;
+    editingUserId = null;
     if (r.warned) showBanner('⚠ インポートデータの一部を修復しました');
     saveData();
     renderUsersModal();

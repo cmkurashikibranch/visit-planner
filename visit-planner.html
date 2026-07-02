@@ -401,6 +401,7 @@ function renderCalendar() {
 /* ===== D&D（PC専用） ===== */
 var pieceDragging = false;
 var pendingDrop = null;
+var dropHandled = false;
 
 function isTouchDevice() {
   return window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 768;
@@ -450,6 +451,7 @@ function resolveDrop() {
   var pd = pendingDrop;
   pendingDrop = null;
   dndState = null;
+  dropHandled = true;
   clearNgColumns();
   document.querySelectorAll('.drop-ok').forEach(function (el) { el.classList.remove('drop-ok'); });
   setTimeout(function () { // NG確認confirmはdropハンドラの外へ逃す
@@ -470,14 +472,15 @@ function onDragEnd() {
   document.querySelectorAll('.drop-ok').forEach(function (el) { el.classList.remove('drop-ok'); });
   document.getElementById('pool').style.outline = '';
   setTimeout(function () { pieceDragging = false; }, 0);
-  renderAll();
+  if (!dropHandled) renderAll();
+  dropHandled = false;
 }
 
 function markNgColumns(userId) {
   var user = userById(userId);
   if (!user || !user.ngDays.length) return;
   document.querySelectorAll('.cal-cell[data-date]').forEach(function (el) {
-    if (user.ngDays.indexOf(dayOfWeek(el.dataset.date)) !== -1) el.classList.add('ng-col');
+    if (isNgDay(user, el.dataset.date)) el.classList.add('ng-col');
   });
 }
 function clearNgColumns() {

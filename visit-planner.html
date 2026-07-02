@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訪問調整</title>
+<style>
+/* CSS は Task 3 で追加 */
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* CORE:START */
+var SLOT_TIMES = { 1: '13:00', 2: '14:30', 3: '16:00' };
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function makeDateStr(y, m, d) { return y + '-' + pad2(m) + '-' + pad2(d); }
+
+function monthKeyOf(dateStr) { return dateStr.slice(0, 7); }
+
+function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+function dayOfWeek(dateStr) {
+  var p = dateStr.split('-');
+  return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getDay();
+}
+
+function isNgDay(user, dateStr) {
+  return Array.isArray(user.ngDays) && user.ngDays.indexOf(dayOfWeek(dateStr)) !== -1;
+}
+
+function isSlotFree(list, dateStr, slot) {
+  return !list.some(function (p) { return p.date === dateStr && p.slot === slot; });
+}
+
+function isPlacedInMonth(list, userId) {
+  return list.some(function (p) { return p.userId === userId; });
+}
+
+function countUnplaced(users, list) {
+  return users.filter(function (u) { return !isPlacedInMonth(list, u.id); }).length;
+}
+/* CORE:END */
+
+/* UI層は Task 3 以降で追加 */
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { pad2: pad2, makeDateStr: makeDateStr };
+}
+</script>
+</body>
+</html>

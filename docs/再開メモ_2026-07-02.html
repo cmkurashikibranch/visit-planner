@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>訪問調整アプリ 再開メモ 2026-07-02</title>
 <style>
-  :root { --accent: #2563eb; --accent-dark: #1e40af; --accent-bg: #eff6ff; --accent-soft: #e8effc; }
+  :root { --accent: #2563eb; --accent-dark: #1d4ed8; --accent-bg: #eff6ff; --accent-soft: #dbeafe; }
   @page { size: A4 portrait; margin: 14mm 13mm; }
   * { box-sizing: border-box; }
   body {
@@ -16,7 +16,7 @@
   h2 { font-size: 12pt; background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 4px; margin: 14px 0 6px; }
   h3 { font-size: 11pt; margin: 10px 0 4px; color: var(--accent-dark); }
   pre {
-    background: #f4f6fa; border: 1px solid #cfd9e8; border-radius: 5px;
+    background: #f4f6fb; border: 1px solid #c7d4ee; border-radius: 5px;
     padding: 7px 9px; font-family: "Consolas", monospace; font-size: 8.7pt;
     line-height: 1.35; white-space: pre; overflow: visible; margin: 6px 0;
   }
@@ -29,63 +29,60 @@
   .next { border: 2px solid var(--accent); background: var(--accent-bg); border-radius: 6px; padding: 9px 12px; margin: 8px 0; }
   ul, ol { margin: 4px 0 4px 0; padding-left: 20px; }
   li { margin: 2px 0; }
-  code { background: #eef1f6; padding: 1px 4px; border-radius: 3px; font-family: "Consolas", monospace; font-size: 9pt; }
+  code { background: #eef1f7; padding: 1px 4px; border-radius: 3px; font-family: "Consolas", monospace; font-size: 9pt; }
   .small { font-size: 8.6pt; color: #555; }
 </style>
 </head>
 <body>
 
 <h1>📋 訪問調整アプリ ── 次回の再開メモ</h1>
-<div class="date">作成：2026-07-02（午前の壁打ちまで） ／ 次回：ここから再開</div>
+<div class="date">作成：2026-07-02（夜・実装Task3まで完了時点） ／ 次回：ここから再開</div>
 
 <h2>① まず思い出す：これは何をするものか</h2>
-<p>ケアマネの<strong>月間訪問の調整を見える化する新しいアプリ</strong>を作るプロジェクトです。イメージは「利用者の名前が書かれたピースを、月間カレンダーにはめ込んでいくパズル」。ピースを全部置けたら今月の調整完了、残っているピース＝まだ訪問予定が決まっていない人、と一目で分かります。</p>
+<p>ケアマネの月間訪問調整を「利用者の名前ピースを月間カレンダーにはめ込む」操作で見える化するアプリ。
+ブラウザだけで動く1ファイル（<code>visit-planner.html</code>）で、データはブラウザ内に自動保存されます（サーバー不要）。</p>
 <pre>
-┌─ 未配置プール ─────────┐        ┌──────── 月間カレンダー ────────┐
-│ [山田さん] [佐藤さん]   │  D&D   │ 各日に 訪問①②③ の3枠           │
-│ [鈴木さん] ⚠火曜NG …  │ ──────▶│ ✓=訪問済み  空欄=空き枠          │
-└────────────────────────┘        └────────────────────────────────┘
-  プールが空 → 今月の調整完了！
-  訪問済み✓を付けたら → その場で「来月の予約」も入れられる
+未配置プール                    月間カレンダー（1日3枠）
+[山田さん ⚠火NG]                ┌─────┬─────┬─────┐
+[佐藤さん]        ──はめ込む──▶ │①田中✓ │①      │①山本  │
+[鈴木さん]                      │②高橋  │②佐野✓ │②      │
+ …                             │③      │③      │③川口  │
+                                └─────┴─────┴─────┘
+プールが空になったら今月の調整完了。
+訪問済み✓を付けると「来月の予約を入れますか？」→その場で来月に配置できる。
 </pre>
 
-<h2>② ここまでにできたこと</h2>
+<h2>② ここまでにできたこと（すべて2026-07-02の1日で）</h2>
 <table>
   <tr><th>項目</th><th>状態</th><th>メモ</th></tr>
-  <tr><td>プロジェクトフォルダ作成</td><td class="done">✅</td><td><code>C:\Users\kkmh2\claude\訪問調整</code>＋CLAUDE.md 作成済み</td></tr>
-  <tr><td>壁打ち（要件の聞き取り）</td><td class="done">✅</td><td>下の表のとおり全部確定</td></tr>
-  <tr><td>作り方の3案の提示</td><td class="done">✅</td><td>案A（HTML1ファイル＋ブラウザ保存）をおすすめとして提示</td></tr>
-  <tr><td>画面イメージの提示</td><td class="done">✅</td><td>左＝未配置プール／右＝月間カレンダーの2分割画面</td></tr>
-  <tr><td>案A＋画面イメージの承認</td><td class="todo">🔲 ここで中断</td><td>帰宅後、まずここから</td></tr>
+  <tr><td>壁打ち・要件確定・方式決定（案A：単一HTML）</td><td class="done">✅</td><td>全員月1回訪問・土日も配置可・スマホは✓と予約OK</td></tr>
+  <tr><td>設計書v3</td><td class="done">✅</td><td>UI/UXデザイナー＋エンジニア＋Codexの3者レビュー計31件を全消化</td></tr>
+  <tr><td>実装計画（Task1〜9・全コード付き）</td><td class="done">✅</td><td><code>docs/superpowers/plans/2026-07-02-visit-planner.md</code></td></tr>
+  <tr><td>Task 1：土台の計算ロジック（判定系）</td><td class="done">✅</td><td>テスト6本パス・レビュー承認</td></tr>
+  <tr><td>Task 2：土台の計算ロジック（変更系）</td><td class="done">✅</td><td>テスト計16本パス・レビュー承認</td></tr>
+  <tr><td>Task 3：画面の骨格・デザイン・保存・表示</td><td class="done">✅</td><td>プール＋カレンダー描画まで完成・レビュー承認</td></tr>
 </table>
-
-<h3>確定した要件（壁打ちの結果）</h3>
-<table>
-  <tr><th>項目</th><th>決定内容</th></tr>
-  <tr><td>解決したい課題</td><td>抜け漏れ・偏り・空き枠把握・利用者の都合との調整（ぜんぶ）</td></tr>
-  <tr><td>利用者数</td><td>20〜40名程度</td></tr>
-  <tr><td>位置づけ</td><td><strong>独立した専用アプリ</strong>。完成後にGoogleカレンダー連携を検討（2段構え）</td></tr>
-  <tr><td>ピースの情報</td><td>名前＋都合メモ（曜日・時間帯NG）＋訪問時刻＋訪問済みチェック</td></tr>
-  <tr><td>1日の枠</td><td>訪問①②③の3枠制＋枠内で時刻の微調整可（今のGoogleカレンダー運用と同じ）</td></tr>
-  <tr><td>使う端末</td><td>主にPC（ドラッグ操作はPC専用、スマホは閲覧のみ）</td></tr>
-  <tr><td>月替わり</td><td>「前月コピー」か「まっさら」を選べる</td></tr>
-  <tr><td>大事な流れ</td><td><strong>訪問済み✓ → その場で来月の予約を入れる</strong>（当月と来月を行き来する運用）</td></tr>
-</table>
+<div class="next">🎉 <b>設計〜実装3タスクまで1日で到達。</b>アプリの「頭脳」（計算部分）はテスト済みで完成、画面の骨組みもできた状態です。</div>
 
 <h2>③ 次にやること（ここから再開）</h2>
-<div class="next"><strong>今日のゴール：案Aと画面イメージにOKを出して、設計書づくりに進む</strong></div>
+<div class="next"><b>ゴール：Task 4〜9 を順に実装して、アプリを完成させる</b><br>
+進め方はこれまでと同じ「サブエージェント駆動」（1タスクずつ実装→レビュー→次へ）。</div>
 <ol>
-  <li>Claude Codeを <code>C:\Users\kkmh2\claude\訪問調整</code>（またはいつもの場所）で開き、「訪問調整アプリの続き。再開メモを読んで」と伝える</li>
-  <li>提示済みの<strong>案A（HTML1ファイル＋ブラウザ保存方式）と画面イメージに、OKか修正希望かを伝える</strong></li>
-  <li>OKが出たら → 設計書（spec）を作成 → 内容を確認してもらう</li>
-  <li>その後 → 実装計画づくり → 実装スタート</li>
+  <li>Claude Codeに「<b>訪問調整アプリの実装を再開して</b>」と伝える</li>
+  <li>Claudeが進捗台帳（<code>訪問調整\.superpowers\sdd\progress.md</code>）を読んで、<span class="todo">Task 4（利用者管理＋バックアップ機能）</span>から自動で再開します</li>
+  <li>残りタスク：Task 4 利用者管理 → 5 クリック配置 → 6 ドラッグ&ドロップ → 7 ✓と来月予約 → 8 月替わり → 9 スマホ対応・総合確認</li>
+  <li>Task 5〜6 が終わったところで、<span class="todo">ブラウザで実際の見た目をまとめて確認</span>（Task 3時点ではまだ画面を目で見ていません）</li>
 </ol>
 
-<div class="box"><strong>💡 覚えておくと良いこと</strong><br>
-・schedule_v4（スケジュール管理アプリ）で月間カレンダーのドラッグ＆ドロップは実装済みなので、その経験を流用できます。<br>
-・データは最初から「日付＋時刻」を持つ形にしておき、将来のGoogleカレンダー連携で変換しやすくする方針です。</div>
+<div class="box">💡 <b>今日の学び</b><br>
+・設計段階でレビューを厚くする（今回は3者・計31件）と、実装前に仕様の矛盾が潰れて手戻りが減る。特にCodexのP1指摘3件は実装後に見つかると大改修だった<br>
+・「予約モード中は月替わりダイアログを出さない」「移動は自分自身を重複判定から除外」など、機能同士のぶつかり合いは設計書に明文化しておくと実装エージェントが迷わない</div>
 
-<p class="small">参照：プロジェクトの詳しい記録は <code>訪問調整\CLAUDE.md</code>（今回の決定事項をすべて反映済み）。関連：<code>スケジュール管理\schedule_v4.html</code>（D&D実装の実績）。</p>
+<p class="small">参照：設計書＝<code>訪問調整\docs\superpowers\specs\2026-07-02-visit-planner-design.md</code>（v3）／
+実装計画＝<code>docs\superpowers\plans\2026-07-02-visit-planner.md</code>／
+進捗台帳＝<code>.superpowers\sdd\progress.md</code>／
+テスト実行＝<code>node --test tests/core.test.js</code>（16本）／
+本日の意思決定ログ＝<code>.company\secretary\notes\2026-07-02-decisions.md</code></p>
 
 </body>
 </html>

@@ -43,6 +43,102 @@ function isPlacedInMonth(list, userId) {
 function countUnplaced(users, list) {
   return users.filter(function (u) { return !isPlacedInMonth(list, u.id); }).length;
 }
+
+function addPlacement(list, userId, date, slot, time) {
+  if (isPlacedInMonth(list, userId)) return { ok: false, reason: 'duplicate' };
+  if (!isSlotFree(list, date, slot)) return { ok: false, reason: 'occupied' };
+  return {
+    ok: true,
+    list: list.concat([{ userId: userId, date: date, slot: slot, time: time, done: false, gcalEventId: null }])
+  };
+}
+
+function movePlacement(list, source, target) {
+  var idx = -1;
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].date === source.date && list[i].slot === source.slot) { idx = i; break; }
+  }
+  if (idx === -1) return { ok: false, reason: 'notfound' };
+  var rest = list.filter(function (_, i) { return i !== idx; });
+  if (!isSlotFree(rest, target.date, target.slot)) return { ok: false, reason: 'occupied' };
+  var moved = {};
+  for (var k in list[idx]) moved[k] = list[idx][k];
+  moved.date = target.date;
+  moved.slot = target.slot;
+  return { ok: true, list: rest.concat([moved]) };
+}
+
+function copyFromPrevMonth(prevList, existingList, users, targetMonth) {
+  var parts = targetMonth.split('-');
+  var maxDay = daysInMonth(Number(parts[0]), Number(parts[1]));
+  var placements = existingList.slice();
+  var pooled = [];
+  prevList.forEach(function (p) {
+    var exists = users.some(function (u) { return u.id === p.userId; });
+    if (!exists) return;                                   // 削除済み利用者は無視
+    if (isPlacedInMonth(placements, p.userId)) return;     // 予約済み→コピー対象外
+    var day = Number(p.date.slice(8, 10));
+    if (day > maxDay) { pooled.push(p.userId); return; }   // 存在しない日→プール
+    var date = targetMonth + '-' + pad2(day);
+    if (!isSlotFree(placements, date, p.slot)) { pooled.push(p.userId); return; } // 衝突→プール
+    placements = placements.concat([{ userId: p.userId, date: date, slot: p.slot, time: p.time, done: false, gcalEventId: null }]);
+  });
+  return { placements: placements, pooled: pooled };
+}
+
+function sanitizeData(raw) {
+  var data = { version: 1, users: [], placements: {}, initializedMonths: [], nextId: 1 };
+  var warned = false;
+  if (!raw || typeof raw !== 'object') return { data: data, warned: raw !== null && raw !== undefined };
+  if (Array.isArray(raw.users)) {
+    raw.users.forEach(function (u) {
+      if (u && typeof u.id === 'number' && typeof u.name === 'string' && u.name !== '') {
+        data.users.push({
+          id: u.id,
+          name: u.name,
+          ngDays: Array.isArray(u.ngDays)
+            ? u.ngDays.filter(function (n) { return Number.isInteger(n) && n >= 0 && n <= 6; })
+            : [],
+          memo: typeof u.memo === 'string' ? u.memo : ''
+        });
+        if (!Array.isArray(u.ngDays) || typeof u.memo !== 'string') warned = true;
+      } else { warned = true; }
+    });
+  } else if (raw.users !== undefined) { warned = true; }
+  var ids = {};
+  data.users.forEach(function (u) { ids[u.id] = true; });
+  if (raw.placements && typeof raw.placements === 'object' && !Array.isArray(raw.placements)) {
+    Object.keys(raw.placements).forEach(function (key) {
+      var arr = raw.placements[key];
+      if (!Array.isArray(arr)) { warned = true; return; }
+      arr.forEach(function (p) {
+        if (!p || !ids[p.userId] || typeof p.date !== 'string' ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(p.date) || [1, 2, 3].indexOf(p.slot) === -1) {
+          warned = true; return;
+        }
+        var mk = monthKeyOf(p.date);
+        if (mk !== key) warned = true; // 不整合→date側を正として移送
+        if (!data.placements[mk]) data.placements[mk] = [];
+        if (isPlacedInMonth(data.placements[mk], p.userId) ||
+            !isSlotFree(data.placements[mk], p.date, p.slot)) { warned = true; return; }
+        data.placements[mk].push({
+          userId: p.userId, date: p.date, slot: p.slot,
+          time: typeof p.time === 'string' ? p.time : SLOT_TIMES[p.slot],
+          done: p.done === true,
+          gcalEventId: typeof p.gcalEventId === 'string' ? p.gcalEventId : null
+        });
+      });
+    });
+  } else if (raw.placements !== undefined) { warned = true; }
+  if (Array.isArray(raw.initializedMonths)) {
+    data.initializedMonths = raw.initializedMonths.filter(function (s) { return typeof s === 'string'; });
+  }
+  var maxId = 0;
+  data.users.forEach(function (u) { if (u.id > maxId) maxId = u.id; });
+  data.nextId = (typeof raw.nextId === 'number' && raw.nextId > maxId) ? raw.nextId : maxId + 1;
+  if (typeof raw.nextId !== 'number') warned = true;
+  return { data: data, warned: warned };
+}
 /* CORE:END */
 
 /* UI層は Task 3 以降で追加 */

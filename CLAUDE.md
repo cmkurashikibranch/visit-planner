@@ -54,9 +54,10 @@
 
 **サブエージェント駆動開発の続きから（Task 4〜9）**
 
-1. `superpowers:subagent-driven-development` で実装再開。進捗台帳＝`.superpowers/sdd/progress.md`（Task 1〜4完了済み・再実行しない）
-2. 実装計画：`docs/superpowers/plans/2026-07-02-visit-planner.md`（Task 5: クリック配置・詳細ポップオーバー・アンドゥ から）
-3. Task 5〜6完了時にブラウザ実表示をまとめて確認（Task 4時点まで静的検証のみ）
+1. `superpowers:subagent-driven-development` で実装再開。進捗台帳＝`.superpowers/sdd/progress.md`（Task 1〜8完了済み・再実行しない）
+2. 実装計画：`docs/superpowers/plans/2026-07-02-visit-planner.md`（Task 9: スマホ対応＋総合動作確認 から）
+3. **Task 9でブラウザ実表示確認を必ず実施**（Task 3〜8はすべて静的検証のみ。UI全機能＝配置・D&D・ポップオーバー・✓予約フロー・月替わりダイアログが未目視）
+4. Task 9完了後：最終ホールブランチレビュー → finishing-a-development-branch
 
 ## 実装進捗（2026-07-03時点）
 
@@ -66,10 +67,14 @@
 | Task 2: CORE変更系純関数（TDD・16テスト） | ✅ レビュー承認 | `fe2b18f`＋`bff2b1f` |
 | Task 3: 画面骨格・CSS・ストレージ・描画 | ✅ レビュー承認 | `e975e68` |
 | Task 4: 利用者管理CRUD＋JSONエクスポート/インポート | ✅ レビュー承認 | `e71205f`＋`b2be232` |
-| Task 5〜9 | 🔲 未着手 | |
+| Task 5: クリック配置・詳細ポップオーバー・アンドゥ | ✅ レビュー承認 | `a9156d5`＋`02d12a9` |
+| Task 6: D&D（PC専用）＋NG事前ハイライト＋pendingDrop | ✅ レビュー承認 | `29f6d48`＋`ffa50c9` |
+| Task 7: ✓トグル＋来月予約フロー（3択モーダル） | ✅ レビュー承認 | `5b8aad7` |
+| Task 8: 月替わりダイアログ＋今月リセット | ✅ レビュー承認 | `84bc219` |
+| Task 9: スマホ対応＋総合動作確認 | 🔲 未着手 | |
 
 - テスト：`node --test tests/core.test.js` → 16/16 PASS
-- レビューでのMinor指摘（最終レビューで棚卸し）：module.exports残骸／sanitizeDataのID重複未排除
+- レビューでのMinor指摘（最終レビューで棚卸し）：module.exports残骸／sanitizeDataのID重複未排除／tryPlace・tryMoveの早期returnがrenderAll非呼出（実害なし）／予約モード中の月ナビ移動が可能（仕様外メモ）／resetCurrentMonthのrenderAll二重呼び（実害なし）
 
 ## 追加確定事項（2026-07-02 設計フェーズ）
 

@@ -8,8 +8,9 @@
 | 項目 | 内容 |
 |------|------|
 | フォルダ | `C:\Users\kkmh2\claude\訪問調整` |
-| 状態 | 構想フェーズ（壁打ち完了・方式案A提示済み・ユーザー承認待ち） |
-| 想定形式 | 案A：単一HTML + localStorage（`visit-planner.html`）を提案中 |
+| 状態 | 設計フェーズ完了（案A承認済み・設計書v2レビュー反映済み・ユーザーの最終確認待ち） |
+| 形式 | 案A確定：単一HTML + localStorage（`visit-planner.html`） |
+| 設計書 | `docs/superpowers/specs/2026-07-02-visit-planner-design.md`（v2） |
 
 ## コンセプト（ユーザーのイメージ）
 
@@ -51,9 +52,14 @@
 
 ## 次にやること（再開時）
 
-1. **案A＋画面イメージのユーザー承認を得る**（前回はここで中断）
-2. 承認後：superpowers:brainstorming の続き → 設計書を `docs/superpowers/specs/2026-MM-DD-visit-planner-design.md` に作成
-3. スペックレビュー → superpowers:writing-plans で実装計画 → 実装
+1. 設計書v2のユーザー最終確認
+2. superpowers:writing-plans で実装計画 → 実装
+
+## 追加確定事項（2026-07-02 設計フェーズ）
+
+- 訪問頻度は全員月1回（1人＝1ピース）／土日も配置可の7列カレンダー／NG曜日は警告付き
+- スマホは✓チェック・クリック配置・来月予約まで可（D&DのみPC専用）
+- UI/UX＋シニアエンジニアの2体レビュー計24件を設計書v2に反映（月替わりは initializedMonths フラグ、重複ガード isPlacedInMonth 一元化、クリック配置の代替操作、予約モードバナー＋自動復帰、直前1操作アンドゥなど）
 
 ## 関連プロジェクト
 

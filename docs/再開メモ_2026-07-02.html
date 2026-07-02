@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>訪問調整アプリ 再開メモ 2026-07-02</title>
+<style>
+  :root { --accent: #2563eb; --accent-dark: #1e40af; --accent-bg: #eff6ff; --accent-soft: #e8effc; }
+  @page { size: A4 portrait; margin: 14mm 13mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Yu Gothic", "Meiryo", sans-serif;
+    color: #1a1a1a; line-height: 1.5; font-size: 10.5pt; margin: 0;
+  }
+  h1 { font-size: 16pt; margin: 0 0 2px; border-bottom: 3px solid var(--accent); padding-bottom: 4px; }
+  .date { color: #666; font-size: 9pt; margin-bottom: 10px; }
+  h2 { font-size: 12pt; background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 4px; margin: 14px 0 6px; }
+  h3 { font-size: 11pt; margin: 10px 0 4px; color: var(--accent-dark); }
+  pre {
+    background: #f4f6fa; border: 1px solid #cfd9e8; border-radius: 5px;
+    padding: 7px 9px; font-family: "Consolas", monospace; font-size: 8.7pt;
+    line-height: 1.35; white-space: pre; overflow: visible; margin: 6px 0;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 9.3pt; }
+  th, td { border: 1px solid #bbb; padding: 4px 7px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); }
+  .done { color: var(--accent-dark); font-weight: bold; }
+  .todo { color: #c0392b; font-weight: bold; }
+  .box { border: 1.5px solid #f0a500; background: #fff8e8; border-radius: 6px; padding: 8px 11px; margin: 8px 0; font-size: 9.5pt; }
+  .next { border: 2px solid var(--accent); background: var(--accent-bg); border-radius: 6px; padding: 9px 12px; margin: 8px 0; }
+  ul, ol { margin: 4px 0 4px 0; padding-left: 20px; }
+  li { margin: 2px 0; }
+  code { background: #eef1f6; padding: 1px 4px; border-radius: 3px; font-family: "Consolas", monospace; font-size: 9pt; }
+  .small { font-size: 8.6pt; color: #555; }
+</style>
+</head>
+<body>
+
+<h1>📋 訪問調整アプリ ── 次回の再開メモ</h1>
+<div class="date">作成：2026-07-02（午前の壁打ちまで） ／ 次回：ここから再開</div>
+
+<h2>① まず思い出す：これは何をするものか</h2>
+<p>ケアマネの<strong>月間訪問の調整を見える化する新しいアプリ</strong>を作るプロジェクトです。イメージは「利用者の名前が書かれたピースを、月間カレンダーにはめ込んでいくパズル」。ピースを全部置けたら今月の調整完了、残っているピース＝まだ訪問予定が決まっていない人、と一目で分かります。</p>
+<pre>
+┌─ 未配置プール ─────────┐        ┌──────── 月間カレンダー ────────┐
+│ [山田さん] [佐藤さん]   │  D&D   │ 各日に 訪問①②③ の3枠           │
+│ [鈴木さん] ⚠火曜NG …  │ ──────▶│ ✓=訪問済み  空欄=空き枠          │
+└────────────────────────┘        └────────────────────────────────┘
+  プールが空 → 今月の調整完了！
+  訪問済み✓を付けたら → その場で「来月の予約」も入れられる
+</pre>
+
+<h2>② ここまでにできたこと</h2>
+<table>
+  <tr><th>項目</th><th>状態</th><th>メモ</th></tr>
+  <tr><td>プロジェクトフォルダ作成</td><td class="done">✅</td><td><code>C:\Users\kkmh2\claude\訪問調整</code>＋CLAUDE.md 作成済み</td></tr>
+  <tr><td>壁打ち（要件の聞き取り）</td><td class="done">✅</td><td>下の表のとおり全部確定</td></tr>
+  <tr><td>作り方の3案の提示</td><td class="done">✅</td><td>案A（HTML1ファイル＋ブラウザ保存）をおすすめとして提示</td></tr>
+  <tr><td>画面イメージの提示</td><td class="done">✅</td><td>左＝未配置プール／右＝月間カレンダーの2分割画面</td></tr>
+  <tr><td>案A＋画面イメージの承認</td><td class="todo">🔲 ここで中断</td><td>帰宅後、まずここから</td></tr>
+</table>
+
+<h3>確定した要件（壁打ちの結果）</h3>
+<table>
+  <tr><th>項目</th><th>決定内容</th></tr>
+  <tr><td>解決したい課題</td><td>抜け漏れ・偏り・空き枠把握・利用者の都合との調整（ぜんぶ）</td></tr>
+  <tr><td>利用者数</td><td>20〜40名程度</td></tr>
+  <tr><td>位置づけ</td><td><strong>独立した専用アプリ</strong>。完成後にGoogleカレンダー連携を検討（2段構え）</td></tr>
+  <tr><td>ピースの情報</td><td>名前＋都合メモ（曜日・時間帯NG）＋訪問時刻＋訪問済みチェック</td></tr>
+  <tr><td>1日の枠</td><td>訪問①②③の3枠制＋枠内で時刻の微調整可（今のGoogleカレンダー運用と同じ）</td></tr>
+  <tr><td>使う端末</td><td>主にPC（ドラッグ操作はPC専用、スマホは閲覧のみ）</td></tr>
+  <tr><td>月替わり</td><td>「前月コピー」か「まっさら」を選べる</td></tr>
+  <tr><td>大事な流れ</td><td><strong>訪問済み✓ → その場で来月の予約を入れる</strong>（当月と来月を行き来する運用）</td></tr>
+</table>
+
+<h2>③ 次にやること（ここから再開）</h2>
+<div class="next"><strong>今日のゴール：案Aと画面イメージにOKを出して、設計書づくりに進む</strong></div>
+<ol>
+  <li>Claude Codeを <code>C:\Users\kkmh2\claude\訪問調整</code>（またはいつもの場所）で開き、「訪問調整アプリの続き。再開メモを読んで」と伝える</li>
+  <li>提示済みの<strong>案A（HTML1ファイル＋ブラウザ保存方式）と画面イメージに、OKか修正希望かを伝える</strong></li>
+  <li>OKが出たら → 設計書（spec）を作成 → 内容を確認してもらう</li>
+  <li>その後 → 実装計画づくり → 実装スタート</li>
+</ol>
+
+<div class="box"><strong>💡 覚えておくと良いこと</strong><br>
+・schedule_v4（スケジュール管理アプリ）で月間カレンダーのドラッグ＆ドロップは実装済みなので、その経験を流用できます。<br>
+・データは最初から「日付＋時刻」を持つ形にしておき、将来のGoogleカレンダー連携で変換しやすくする方針です。</div>
+
+<p class="small">参照：プロジェクトの詳しい記録は <code>訪問調整\CLAUDE.md</code>（今回の決定事項をすべて反映済み）。関連：<code>スケジュール管理\schedule_v4.html</code>（D&D実装の実績）。</p>
+
+</body>
+</html>

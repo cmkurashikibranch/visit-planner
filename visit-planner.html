@@ -137,6 +137,7 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" id="users-tools">
       <button class="btn" id="btn-export">⬇ JSONエクスポート</button>
       <button class="btn" id="btn-import">⬆ JSONインポート</button>
+      <button class="btn danger" id="btn-reset-month">🗓 今月をリセット</button>
       <input type="file" id="import-file" accept=".json,application/json" style="display:none">
     </div>
     <div class="close-row"><button class="btn" id="users-close">閉じる</button></div>
@@ -795,6 +796,18 @@ function deleteUser(id) {
   renderUsersModal();
 }
 
+/* ===== 今月をリセット ===== */
+function resetCurrentMonth() {
+  var mk = curMonthKey();
+  if (!confirm(viewMonth + '月の配置をすべて消します（予約由来の配置も含む）。よろしいですか？')) return;
+  delete appData.placements[mk];
+  appData.initializedMonths = appData.initializedMonths.filter(function (x) { return x !== mk; });
+  saveData();
+  closeUsersModal();
+  renderAll();
+  maybeInitMonth();
+}
+
 /* ===== JSONエクスポート/インポート ===== */
 function exportJson() {
   var blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
@@ -824,13 +837,49 @@ function importJson(file) {
 }
 
 /* ===== 月ナビ ===== */
+function prevMonthKeyOf(y, m) {
+  return m === 1 ? (y - 1) + '-12' : y + '-' + pad2(m - 1);
+}
+
+function maybeInitMonth() {
+  if (reserveMode) return; // 予約モード中は出さない・initializedMonthsにも入れない
+  var mk = curMonthKey();
+  if (appData.initializedMonths.indexOf(mk) !== -1) return;
+  if (!appData.users.length) return; // 利用者未登録なら出さない
+  var prevList = appData.placements[prevMonthKeyOf(viewYear, viewMonth)] || [];
+  var existing = curList();
+  var reservedCount = existing.length;
+  var buttons = [];
+  var text = viewMonth + '月の配置をどうしますか？\n';
+  if (prevList.length) {
+    var preview = copyFromPrevMonth(prevList, existing, appData.users, mk);
+    var placed = preview.placements.length - existing.length;
+    text += '「前月コピー」: ' + placed + '名を前月と同じ日・枠で配置' +
+      (preview.pooled.length ? '（' + preview.pooled.length + '名はプールへ）' : '') +
+      (reservedCount ? '（' + reservedCount + '名は予約済み）' : '') + '\n';
+    buttons.push({ label: '前月コピー', value: 'copy', primary: true });
+  }
+  text += '「まっさら」: ' + (reservedCount ? '予約済み' + reservedCount + '名以外を' : '全員を') + 'プールから手で配置';
+  buttons.push({ label: 'まっさら', value: 'blank', primary: !prevList.length });
+  showChoice(text, buttons).then(function (v) {
+    if (v === 'copy') {
+      var r = copyFromPrevMonth(prevList, existing, appData.users, mk);
+      appData.placements[mk] = r.placements;
+    }
+    // 'blank' は既存予約を保持したまま何もしない（4.4）
+    appData.initializedMonths.push(mk);
+    saveData();
+    renderAll();
+  });
+}
+
 function openMonth(y, m) {
   closePopover();
   if (m < 1) { y--; m = 12; }
   if (m > 12) { y++; m = 1; }
   viewYear = y; viewMonth = m;
-  // Task 8: ここに月替わりダイアログの判定を差し込む
   renderAll();
+  maybeInitMonth();
 }
 
 /* ===== 初期化 ===== */
@@ -852,6 +901,7 @@ function init() {
   };
   document.getElementById('btn-export').onclick = exportJson;
   document.getElementById('btn-import').onclick = function () { document.getElementById('import-file').click(); };
+  document.getElementById('btn-reset-month').onclick = resetCurrentMonth;
   document.getElementById('import-file').onchange = function (e) {
     if (e.target.files[0]) importJson(e.target.files[0]);
     e.target.value = '';
@@ -898,6 +948,7 @@ function init() {
     resolveDrop();
   });
   renderAll();
+  maybeInitMonth();
 }
 init();
 

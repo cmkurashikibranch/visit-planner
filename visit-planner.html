@@ -89,6 +89,12 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 .popover .name { font-weight: 700; margin-bottom: 6px; }
 .popover input[type=time] { padding: 4px; border: 1px solid var(--line); border-radius: 6px; }
 .popover .rows { display: flex; flex-direction: column; gap: 6px; }
+.choice-back { position: fixed; inset: 0; background: rgba(15,23,42,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 300; }
+.choice { background: var(--card); border-radius: 14px; padding: 18px;
+  width: min(340px, 90vw); font-size: 14px; }
+.choice .text { margin-bottom: 14px; line-height: 1.6; }
+.choice .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -380,7 +386,12 @@ function renderCalendar() {
       if (p) {
         fill++;
         var u = userById(p.userId);
-        var nextBadge = ''; // Task 7 で来月予約バッジを差し込む
+        var nextBadge = '';
+        if (p.done) {
+          var nmk2 = nextMonthKeyOf(viewYear, viewMonth);
+          var np = (appData.placements[nmk2] || []).filter(function (x) { return x.userId === p.userId; })[0];
+          if (np) nextBadge = ' <span class="next-badge">📅' + Number(np.date.slice(5, 7)) + '/' + Number(np.date.slice(8, 10)) + '</span>';
+        }
         slots += '<div class="cal-slot filled' + (p.done ? ' done' : '') + '" data-date="' + date + '" data-slot="' + s + '">' +
           '<span class="piece-body" data-date="' + date + '" data-slot="' + s + '">' +
           (isNgDay(u, date) ? '<span class="warn">⚠</span>' : '') +
@@ -512,6 +523,25 @@ function showToast(label) {
 }
 function hideToast() { document.getElementById('toast').style.display = 'none'; }
 
+/* ===== カスタム選択モーダル（3択対応・confirm代替） ===== */
+function showChoice(text, buttons) {
+  return new Promise(function (resolve) {
+    var back = document.createElement('div');
+    back.className = 'choice-back';
+    back.innerHTML = '<div class="choice"><div class="text">' + escapeHtml(text) + '</div>' +
+      '<div class="btns">' + buttons.map(function (b, i) {
+        return '<button class="btn' + (b.primary ? ' primary' : '') + '" data-i="' + i + '">' + escapeHtml(b.label) + '</button>';
+      }).join('') + '</div></div>';
+    back.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-i]');
+      if (!btn) return;
+      back.remove();
+      resolve(buttons[Number(btn.dataset.i)].value);
+    });
+    document.body.appendChild(back);
+  });
+}
+
 /* ===== 配置・移動の共通経路（NG確認込み） ===== */
 function findPlacement(list, date, slot) {
   for (var i = 0; i < list.length; i++) {
@@ -576,8 +606,70 @@ function returnToPool(date, slot) {
   showToast(user.name + 'さんをプールに戻しました');
 }
 
-/* Task 7 で本実装。それまで常に false を返すダミー */
-function consumeReserveMode(userId, date) { return false; }
+/* ===== 訪問済み✓ → 来月予約 ===== */
+function nextMonthKeyOf(y, m) {
+  return m === 12 ? (y + 1) + '-01' : y + '-' + pad2(m + 1);
+}
+
+function toggleDone(date, slot) {
+  if (pieceDragging) return; // ドラッグ直後の誤発火防止
+  var p = findPlacement(curList(), date, slot);
+  if (!p) return;
+  var user = userById(p.userId);
+  var nmk = nextMonthKeyOf(viewYear, viewMonth);
+  var nextList = appData.placements[nmk] || [];
+  if (p.done) {
+    p.done = false; // 解除（来月予約は残す。再✓時に予約済みならダイアログなし）
+    saveData();
+    renderAll();
+    return;
+  }
+  p.done = true;
+  if (isPlacedInMonth(nextList, p.userId)) { // 予約済み→ダイアログなし
+    saveData();
+    renderAll();
+    return;
+  }
+  showChoice(user.name + 'さんを訪問済みにしました。\n来月の予約を入れますか？', [
+    { label: 'キャンセル', value: 'cancel' },
+    { label: 'いいえ', value: 'no' },
+    { label: 'はい', value: 'yes', primary: true }
+  ]).then(function (v) {
+    if (v === 'cancel') { p.done = false; saveData(); renderAll(); return; } // ✓も取り消す
+    if (v === 'no') { saveData(); renderAll(); return; }
+    saveData();
+    enterReserveMode(p.userId);
+  });
+}
+
+function enterReserveMode(userId) {
+  reserveMode = { userId: userId, returnYear: viewYear, returnMonth: viewMonth };
+  var user = userById(userId);
+  openMonth(viewYear, viewMonth + 1); // 予約モード中は月替わりダイアログを出さない（openMonth側で判定）
+  var el = document.getElementById('mode-banner');
+  el.innerHTML = '📅 予約モード：' + escapeHtml(user.name) + 'さんの来月の枠を選んでください ' +
+    '<button class="btn" id="reserve-cancel">当月に戻る</button>';
+  el.style.display = 'flex';
+  document.getElementById('reserve-cancel').onclick = exitReserveMode;
+}
+
+function exitReserveMode() {
+  var rm = reserveMode;
+  reserveMode = null;
+  document.getElementById('mode-banner').style.display = 'none';
+  if (rm) openMonth(rm.returnYear, rm.returnMonth);
+}
+
+/* Task 5 のダミーを置き換え：予約モード中の配置成立→自動で当月へ戻る */
+function consumeReserveMode(userId, date) {
+  if (reserveMode && reserveMode.userId === userId) {
+    var user = userById(userId);
+    exitReserveMode();
+    showToast(user.name + 'さんの来月予約を入れました（' + Number(date.slice(5, 7)) + '/' + Number(date.slice(8, 10)) + '）');
+    return true;
+  }
+  return false;
+}
 
 /* ===== クリック配置（選択モード） ===== */
 function enterSelectMode(userId, source) {
@@ -773,11 +865,15 @@ function init() {
   };
   document.getElementById('cal-grid').onclick = function (e) {
     var check = e.target.closest('.check');
-    if (check) return; // ✓は Task 7 で処理
+    if (check) { toggleDone(check.dataset.date, Number(check.dataset.slot)); return; }
     var slotEl = e.target.closest('.cal-slot');
     if (!slotEl) { closePopover(); return; }
     var date = slotEl.dataset.date, slot = Number(slotEl.dataset.slot);
     var filled = slotEl.classList.contains('filled');
+    if (reserveMode && !filled) {
+      tryPlace(reserveMode.userId, date, slot);
+      return;
+    }
     if (selectMode) {
       if (filled) return; // 埋まった枠は受け付けない
       var sm = selectMode;

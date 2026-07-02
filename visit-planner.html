@@ -59,6 +59,24 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 .cal-slot .next-badge { font-size: 10px; color: var(--text-2); }
 .cal-slot.drop-ok { outline: 2px solid var(--accent); background: #EFF6FF; }
 .cal-cell.ng-col { background: #FEF2F2; }
+.modal-back { position: fixed; inset: 0; background: rgba(15,23,42,.45);
+  display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal { background: var(--card); border-radius: 14px; padding: 16px;
+  width: min(560px, 92vw); max-height: 86vh; overflow-y: auto; }
+.modal h2 { font-size: 16px; margin-bottom: 10px; }
+.modal .close-row { text-align: right; margin-top: 10px; }
+.user-row { display: flex; align-items: center; gap: 6px; padding: 6px 0;
+  border-bottom: 1px solid var(--line); font-size: 13px; flex-wrap: wrap; }
+.user-row .name { font-weight: 700; min-width: 90px; }
+.user-row .meta { color: var(--text-2); flex: 1; }
+.user-form { display: flex; flex-direction: column; gap: 8px; margin-top: 10px;
+  padding: 10px; background: var(--bg); border-radius: 10px; }
+.user-form input[type=text] { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.ng-checks { display: flex; gap: 8px; font-size: 13px; flex-wrap: wrap; }
+.btn { cursor: pointer; border: 1px solid var(--line); background: var(--card);
+  border-radius: 8px; padding: 5px 12px; font-size: 13px; }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn.danger { color: var(--ng); }
 </style>
 </head>
 <body>
@@ -84,6 +102,28 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
     <div class="cal-grid" id="cal-grid"></div>
   </section>
 </main>
+<div class="modal-back" id="users-modal" style="display:none">
+  <div class="modal">
+    <h2>👥 利用者管理</h2>
+    <div id="users-list"></div>
+    <div class="user-form">
+      <div id="form-title" style="font-size:13px;color:var(--text-2)">新規登録</div>
+      <input type="text" id="uf-name" placeholder="名前（必須）">
+      <div class="ng-checks" id="uf-ng"></div>
+      <input type="text" id="uf-memo" placeholder="自由メモ（例：午前は通所）">
+      <div>
+        <button class="btn primary" id="uf-save">保存</button>
+        <button class="btn" id="uf-cancel" style="display:none">編集をやめる</button>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap" id="users-tools">
+      <button class="btn" id="btn-export">⬇ JSONエクスポート</button>
+      <button class="btn" id="btn-import">⬆ JSONインポート</button>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="close-row"><button class="btn" id="users-close">閉じる</button></div>
+  </div>
+</div>
 <div id="toast" style="display:none"></div>
 <script>
 'use strict';
@@ -345,6 +385,97 @@ function renderCalendar() {
   grid.innerHTML = html;
 }
 
+/* ===== 利用者管理 ===== */
+var editingUserId = null;
+
+function openUsersModal() {
+  editingUserId = null;
+  renderUsersModal();
+  document.getElementById('users-modal').style.display = 'flex';
+}
+function closeUsersModal() {
+  document.getElementById('users-modal').style.display = 'none';
+  renderAll();
+}
+
+function renderUsersModal() {
+  var listEl = document.getElementById('users-list');
+  var sorted = appData.users.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+  listEl.innerHTML = sorted.map(function (u) {
+    return '<div class="user-row"><span class="name">' + escapeHtml(u.name) + 'さん</span>' +
+      '<span class="meta">' + (u.ngDays.length ? ngBadgeText(u) + ' ' : '') + escapeHtml(u.memo) + '</span>' +
+      '<button class="btn" data-edit="' + u.id + '">編集</button>' +
+      '<button class="btn danger" data-del="' + u.id + '">削除</button></div>';
+  }).join('') || '<div style="color:var(--text-2);font-size:13px">まだ登録がありません</div>';
+  var ngEl = document.getElementById('uf-ng');
+  var checked = editingUserId !== null ? userById(editingUserId).ngDays : [];
+  ngEl.innerHTML = 'NG曜日: ' + DOW_LABELS.map(function (l, i) {
+    return '<label><input type="checkbox" value="' + i + '"' +
+      (checked.indexOf(i) !== -1 ? ' checked' : '') + '>' + l + '</label>';
+  }).join('');
+  document.getElementById('form-title').textContent =
+    editingUserId === null ? '新規登録' : userById(editingUserId).name + 'さんを編集中';
+  document.getElementById('uf-name').value = editingUserId === null ? '' : userById(editingUserId).name;
+  document.getElementById('uf-memo').value = editingUserId === null ? '' : userById(editingUserId).memo;
+  document.getElementById('uf-cancel').style.display = editingUserId === null ? 'none' : 'inline-block';
+}
+
+function saveUserForm() {
+  var name = document.getElementById('uf-name').value.trim();
+  if (!name) { alert('名前を入力してください'); return; }
+  var ngDays = Array.prototype.slice.call(
+    document.querySelectorAll('#uf-ng input:checked')).map(function (el) { return Number(el.value); });
+  var memo = document.getElementById('uf-memo').value.trim();
+  if (editingUserId === null) {
+    appData.users.push({ id: appData.nextId++, name: name, ngDays: ngDays, memo: memo });
+  } else {
+    var u = userById(editingUserId);
+    u.name = name; u.ngDays = ngDays; u.memo = memo;
+  }
+  editingUserId = null;
+  saveData();
+  renderUsersModal();
+}
+
+function deleteUser(id) {
+  var u = userById(id);
+  if (!confirm(u.name + 'さんを削除しますか？\nすべての月の配置も削除されます')) return;
+  appData.users = appData.users.filter(function (x) { return x.id !== id; });
+  Object.keys(appData.placements).forEach(function (mk) {
+    appData.placements[mk] = appData.placements[mk].filter(function (p) { return p.userId !== id; });
+  });
+  if (editingUserId === id) editingUserId = null;
+  saveData();
+  renderUsersModal();
+}
+
+/* ===== JSONエクスポート/インポート ===== */
+function exportJson() {
+  var blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'visit-planner-' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importJson(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    var raw = null;
+    try { raw = JSON.parse(reader.result); }
+    catch (e) { alert('JSONファイルを読み取れませんでした'); return; }
+    if (!confirm('現在のデータをインポート内容で置き換えます。よろしいですか？')) return;
+    var r = sanitizeData(raw);
+    appData = r.data;
+    if (r.warned) showBanner('⚠ インポートデータの一部を修復しました');
+    saveData();
+    renderUsersModal();
+    renderAll();
+  };
+  reader.readAsText(file);
+}
+
 /* ===== 月ナビ ===== */
 function openMonth(y, m) {
   if (m < 1) { y--; m = 12; }
@@ -362,6 +493,21 @@ function init() {
   document.getElementById('prev-month').onclick = function () { openMonth(viewYear, viewMonth - 1); };
   document.getElementById('next-month').onclick = function () { openMonth(viewYear, viewMonth + 1); };
   document.getElementById('pool-search').oninput = function () { renderPool(); };
+  document.getElementById('open-users').onclick = openUsersModal;
+  document.getElementById('users-close').onclick = closeUsersModal;
+  document.getElementById('uf-save').onclick = saveUserForm;
+  document.getElementById('uf-cancel').onclick = function () { editingUserId = null; renderUsersModal(); };
+  document.getElementById('users-list').onclick = function (e) {
+    var t = e.target;
+    if (t.dataset.edit) { editingUserId = Number(t.dataset.edit); renderUsersModal(); }
+    if (t.dataset.del) deleteUser(Number(t.dataset.del));
+  };
+  document.getElementById('btn-export').onclick = exportJson;
+  document.getElementById('btn-import').onclick = function () { document.getElementById('import-file').click(); };
+  document.getElementById('import-file').onchange = function (e) {
+    if (e.target.files[0]) importJson(e.target.files[0]);
+    e.target.value = '';
+  };
   renderAll();
 }
 init();

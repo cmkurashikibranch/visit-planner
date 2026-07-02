@@ -54,21 +54,22 @@
 
 **サブエージェント駆動開発の続きから（Task 4〜9）**
 
-1. `superpowers:subagent-driven-development` で実装再開。進捗台帳＝`.superpowers/sdd/progress.md`（Task 1〜3完了済み・再実行しない）
-2. 実装計画：`docs/superpowers/plans/2026-07-02-visit-planner.md`（Task 4: 利用者管理CRUD＋JSONエクスポート/インポート から）
-3. Task 5〜6完了時にブラウザ実表示をまとめて確認（Task 3時点では静的検証のみ）
+1. `superpowers:subagent-driven-development` で実装再開。進捗台帳＝`.superpowers/sdd/progress.md`（Task 1〜4完了済み・再実行しない）
+2. 実装計画：`docs/superpowers/plans/2026-07-02-visit-planner.md`（Task 5: クリック配置・詳細ポップオーバー・アンドゥ から）
+3. Task 5〜6完了時にブラウザ実表示をまとめて確認（Task 4時点まで静的検証のみ）
 
-## 実装進捗（2026-07-02時点）
+## 実装進捗（2026-07-03時点）
 
 | タスク | 状態 | コミット |
 |--------|------|---------|
 | Task 1: HTML骨格＋CORE判定系純関数（TDD） | ✅ レビュー承認 | `6073ebe` |
 | Task 2: CORE変更系純関数（TDD・16テスト） | ✅ レビュー承認 | `fe2b18f`＋`bff2b1f` |
 | Task 3: 画面骨格・CSS・ストレージ・描画 | ✅ レビュー承認 | `e975e68` |
-| Task 4〜9 | 🔲 未着手 | |
+| Task 4: 利用者管理CRUD＋JSONエクスポート/インポート | ✅ レビュー承認 | `e71205f`＋`b2be232` |
+| Task 5〜9 | 🔲 未着手 | |
 
 - テスト：`node --test tests/core.test.js` → 16/16 PASS
-- レビューでのMinor指摘（最終レビューで棚卸し）：module.exports残骸／sanitizeDataのID重複未排除／open-users未配線（Task 4で解消）
+- レビューでのMinor指摘（最終レビューで棚卸し）：module.exports残骸／sanitizeDataのID重複未排除
 
 ## 追加確定事項（2026-07-02 設計フェーズ）
 

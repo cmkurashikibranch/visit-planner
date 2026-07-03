@@ -95,6 +95,13 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
   width: min(340px, 90vw); font-size: 14px; }
 .choice .text { margin-bottom: 14px; line-height: 1.6; }
 .choice .btns { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+@media (max-width: 767px) {
+  main { grid-template-columns: 1fr; height: auto; }
+  #pool { max-height: 30vh; }
+  .cal-grid { min-width: 560px; }
+  #calendar { overflow-x: auto; }
+  .cal-slot .check { min-width: 32px; padding: 4px 0; } /* タップしやすく */
+}
 </style>
 </head>
 <body>

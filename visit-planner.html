@@ -9,6 +9,7 @@
   --bg: #F8FAFC; --card: #FFFFFF; --accent: #2563EB;
   --text: #0F172A; --text-2: #64748B; --line: #E2E8F0;
   --visit: #0C9E8E; --done-bg: #F1F5F9; --ng: #E03F3F; --warn-bg: #FEF3C7;
+  --type-mon: #7C3AED; --type-meet: #3B50A0; --type-other: #6B7280;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text);
@@ -40,7 +41,7 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .cal-dow { text-align: center; font-size: 11px; color: var(--text-2); padding: 2px 0; }
 .cal-cell { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
-  padding: 2px; min-height: 84px; }
+  padding: 2px; min-height: 106px; }
 .cal-cell.other-month { background: transparent; border: none; }
 .cal-cell .day-head { display: flex; justify-content: space-between; font-size: 11px;
   color: var(--text-2); padding: 0 2px; }
@@ -51,8 +52,17 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
   padding: 1px 4px; color: var(--text-2); }
 .cal-slot .slot-label { opacity: .45; font-size: 11px; }
 .cal-slot.filled { border-style: solid; border-color: var(--visit); color: var(--text);
-  justify-content: space-between; cursor: pointer; }
+  border-left-width: 4px; justify-content: space-between; cursor: pointer; }
+.cal-slot.filled.type-monitoring { border-color: var(--type-mon); }
+.cal-slot.filled.type-meeting    { border-color: var(--type-meet); }
+.cal-slot.filled.type-other      { border-color: var(--type-other); }
 .cal-slot.filled.done { background: var(--done-bg); color: var(--text-2); border-color: var(--line); }
+.type-chip { font-size: 10px; padding: 0 3px; border-radius: 4px; color: #fff;
+  margin-right: 3px; flex: none; }
+.type-chip.type-monitoring { background: var(--type-mon); }
+.type-chip.type-meeting    { background: var(--type-meet); }
+.type-chip.type-other      { background: var(--type-other); }
+.cal-slot.filled.done .type-chip { background: var(--text-2); opacity: .6; }
 .cal-slot .check { min-width: 24px; text-align: center; cursor: pointer; border-radius: 4px; }
 .cal-slot .check:hover { background: var(--done-bg); }
 .cal-slot .warn { color: var(--ng); }
@@ -320,6 +330,7 @@ function loadData() {
   var r = sanitizeData(raw);
   appData = r.data;
   if (parseFailed) showBanner('⚠ 保存データを読み込めなかったため、初期状態で起動しました');
+  else if (r.migratedPooled) showBanner('⚠ 旧データを新しい枠割り（午前2・午後2）に移行しました（' + r.migratedPooled + '件はプールに戻しました）');
   else if (r.warned) showBanner('⚠ 一部のデータが壊れていたため修復しました');
 }
 
@@ -403,7 +414,7 @@ function renderCalendar() {
     var date = makeDateStr(viewYear, viewMonth, d);
     var fill = 0;
     var slots = '';
-    for (var s = 1; s <= 3; s++) {
+    for (var s = 1; s <= 4; s++) {
       var p = null;
       for (var j = 0; j < list.length; j++) {
         if (list[j].date === date && list[j].slot === s) { p = list[j]; break; }
@@ -412,23 +423,24 @@ function renderCalendar() {
         fill++;
         var u = userById(p.userId);
         var nextBadge = '';
-        if (p.done) {
+        if (p.done && p.type === 'monitoring') {
           var nmk2 = nextMonthKeyOf(viewYear, viewMonth);
-          var np = (appData.placements[nmk2] || []).filter(function (x) { return x.userId === p.userId; })[0];
+          var np = (appData.placements[nmk2] || []).filter(function (x) { return x.userId === p.userId && x.type === 'monitoring'; })[0];
           if (np) nextBadge = ' <span class="next-badge">📅' + Number(np.date.slice(5, 7)) + '/' + Number(np.date.slice(8, 10)) + '</span>';
         }
-        slots += '<div class="cal-slot filled' + (p.done ? ' done' : '') + '" data-date="' + date + '" data-slot="' + s + '">' +
+        slots += '<div class="cal-slot filled type-' + p.type + (p.done ? ' done' : '') + '" data-date="' + date + '" data-slot="' + s + '">' +
           '<span class="piece-body" data-date="' + date + '" data-slot="' + s + '">' +
+          '<span class="type-chip type-' + p.type + '">' + TYPES[p.type].label + '</span>' +
           (isNgDay(u, date) ? '<span class="warn">⚠</span>' : '') +
           escapeHtml(u.name) + nextBadge + '</span>' +
           '<span class="check" data-date="' + date + '" data-slot="' + s + '">' + (p.done ? '✓' : '○') + '</span></div>';
       } else {
         slots += '<div class="cal-slot" data-date="' + date + '" data-slot="' + s + '">' +
-          '<span class="slot-label">' + ['①', '②', '③'][s - 1] + '</span></div>';
+          '<span class="slot-label">' + SLOT_LABELS[s - 1] + '</span></div>';
       }
     }
     html += '<div class="cal-cell' + (date === today ? ' today' : '') + '" data-date="' + date + '">' +
-      '<div class="day-head"><span class="day-num">' + d + '</span><span class="fill">' + fill + '/3</span></div>' +
+      '<div class="day-head"><span class="day-num">' + d + '</span><span class="fill">' + fill + '/4</span></div>' +
       slots + '</div>';
   }
   grid.innerHTML = html;
@@ -866,7 +878,8 @@ function importJson(file) {
     var r = sanitizeData(raw);
     appData = r.data;
     editingUserId = null;
-    if (r.warned) showBanner('⚠ インポートデータの一部を修復しました');
+    if (r.migratedPooled) showBanner('⚠ 旧形式のデータを新しい枠割りに移行しました（' + r.migratedPooled + '件はプールに戻しました）');
+    else if (r.warned) showBanner('⚠ インポートデータの一部を修復しました');
     saveData();
     renderUsersModal();
     renderAll();

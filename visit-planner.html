@@ -154,7 +154,13 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 <script>
 'use strict';
 /* CORE:START */
-var SLOT_TIMES = { 1: '13:00', 2: '14:30', 3: '16:00' };
+var SLOT_TIMES  = { 1: '10:00', 2: '11:00', 3: '14:00', 4: '15:30' };
+var SLOT_LABELS = ['午前①', '午前②', '午後①', '午後②'];
+var TYPES = {
+  monitoring: { label: 'モニタ', color: '#7C3AED' },
+  meeting:    { label: '会議',   color: '#3B50A0' },
+  other:      { label: '他',     color: '#6B7280' }
+};
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -177,20 +183,20 @@ function isSlotFree(list, dateStr, slot) {
   return !list.some(function (p) { return p.date === dateStr && p.slot === slot; });
 }
 
-function isPlacedInMonth(list, userId) {
-  return list.some(function (p) { return p.userId === userId; });
+function hasMonitoringInMonth(list, userId) {
+  return list.some(function (p) { return p.userId === userId && p.type === 'monitoring'; });
 }
 
 function countUnplaced(users, list) {
-  return users.filter(function (u) { return !isPlacedInMonth(list, u.id); }).length;
+  return users.filter(function (u) { return !hasMonitoringInMonth(list, u.id); }).length;
 }
 
-function addPlacement(list, userId, date, slot, time) {
-  if (isPlacedInMonth(list, userId)) return { ok: false, reason: 'duplicate' };
+function addPlacement(list, userId, date, slot, time, type) {
+  if (type === 'monitoring' && hasMonitoringInMonth(list, userId)) return { ok: false, reason: 'duplicate' };
   if (!isSlotFree(list, date, slot)) return { ok: false, reason: 'occupied' };
   return {
     ok: true,
-    list: list.concat([{ userId: userId, date: date, slot: slot, time: time, done: false, gcalEventId: null }])
+    list: list.concat([{ userId: userId, date: date, slot: slot, time: time, type: type, done: false, gcalEventId: null }])
   };
 }
 
@@ -215,22 +221,25 @@ function copyFromPrevMonth(prevList, existingList, users, targetMonth) {
   var placements = existingList.slice();
   var pooled = [];
   prevList.forEach(function (p) {
+    if (p.type !== 'monitoring') return;                   // 会議・その他はコピー対象外
     var exists = users.some(function (u) { return u.id === p.userId; });
     if (!exists) return;                                   // 削除済み利用者は無視
-    if (isPlacedInMonth(placements, p.userId)) return;     // 予約済み→コピー対象外
+    if (hasMonitoringInMonth(placements, p.userId)) return; // 予約済み→コピー対象外
     var day = Number(p.date.slice(8, 10));
     if (day > maxDay) { pooled.push(p.userId); return; }   // 存在しない日→プール
     var date = targetMonth + '-' + pad2(day);
     if (!isSlotFree(placements, date, p.slot)) { pooled.push(p.userId); return; } // 衝突→プール
-    placements = placements.concat([{ userId: p.userId, date: date, slot: p.slot, time: p.time, done: false, gcalEventId: null }]);
+    placements = placements.concat([{ userId: p.userId, date: date, slot: p.slot, time: p.time, type: 'monitoring', done: false, gcalEventId: null }]);
   });
   return { placements: placements, pooled: pooled };
 }
 
 function sanitizeData(raw) {
-  var data = { version: 1, users: [], placements: {}, initializedMonths: [], nextId: 1 };
+  var data = { version: 2, users: [], placements: {}, initializedMonths: [], nextId: 1 };
   var warned = false;
-  if (!raw || typeof raw !== 'object') return { data: data, warned: raw !== null && raw !== undefined };
+  var migratedPooled = 0;
+  if (!raw || typeof raw !== 'object') return { data: data, warned: raw !== null && raw !== undefined, migratedPooled: 0 };
+  var isV1 = raw.version !== 2; // v1 または version欠損は旧形式として移行
   if (Array.isArray(raw.users)) {
     raw.users.forEach(function (u) {
       if (u && typeof u.id === 'number' && typeof u.name === 'string' && u.name !== '') {
@@ -254,17 +263,25 @@ function sanitizeData(raw) {
       if (!Array.isArray(arr)) { warned = true; return; }
       arr.forEach(function (p) {
         if (!p || !ids[p.userId] || typeof p.date !== 'string' ||
-            !/^\d{4}-\d{2}-\d{2}$/.test(p.date) || [1, 2, 3].indexOf(p.slot) === -1) {
-          warned = true; return;
-        }
+            !/^\d{4}-\d{2}-\d{2}$/.test(p.date)) { warned = true; return; }
+        var slot = p.slot;
+        if (isV1) {
+          if (slot === 1) slot = 3;                             // 旧①(13:00)→午後①
+          else if (slot === 2) slot = 4;                        // 旧②(14:30)→午後②
+          else if (slot === 3) { migratedPooled++; return; }    // 旧③は行き先なし→プールへ
+          else { warned = true; return; }
+        } else if ([1, 2, 3, 4].indexOf(slot) === -1) { warned = true; return; }
+        var type = (p.type === 'monitoring' || p.type === 'meeting' || p.type === 'other') ? p.type : 'monitoring';
+        if (!isV1 && type !== p.type) warned = true;            // v2でtype欠損・不正→修復して警告
         var mk = monthKeyOf(p.date);
         if (mk !== key) warned = true; // 不整合→date側を正として移送
         if (!data.placements[mk]) data.placements[mk] = [];
-        if (isPlacedInMonth(data.placements[mk], p.userId) ||
-            !isSlotFree(data.placements[mk], p.date, p.slot)) { warned = true; return; }
+        if ((type === 'monitoring' && hasMonitoringInMonth(data.placements[mk], p.userId)) ||
+            !isSlotFree(data.placements[mk], p.date, slot)) { warned = true; return; }
         data.placements[mk].push({
-          userId: p.userId, date: p.date, slot: p.slot,
-          time: typeof p.time === 'string' ? p.time : SLOT_TIMES[p.slot],
+          userId: p.userId, date: p.date, slot: slot,
+          time: typeof p.time === 'string' ? p.time : SLOT_TIMES[slot],
+          type: type,
           done: p.done === true,
           gcalEventId: typeof p.gcalEventId === 'string' ? p.gcalEventId : null
         });
@@ -278,7 +295,7 @@ function sanitizeData(raw) {
   data.users.forEach(function (u) { if (u.id > maxId) maxId = u.id; });
   data.nextId = (typeof raw.nextId === 'number' && raw.nextId > maxId) ? raw.nextId : maxId + 1;
   if (typeof raw.nextId !== 'number') warned = true;
-  return { data: data, warned: warned };
+  return { data: data, warned: warned, migratedPooled: migratedPooled };
 }
 /* CORE:END */
 
@@ -361,7 +378,7 @@ function renderPool() {
   var q = document.getElementById('pool-search').value.trim();
   var list = curList();
   var unplaced = appData.users
-    .filter(function (u) { return !isPlacedInMonth(list, u.id); })
+    .filter(function (u) { return !hasMonitoringInMonth(list, u.id); })
     .filter(function (u) { return !q || u.name.indexOf(q) !== -1; })
     .sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
   if (!appData.users.length) {
@@ -530,6 +547,13 @@ function showToast(label) {
   toastTimer = setTimeout(hideToast, 5000);
 }
 function hideToast() { document.getElementById('toast').style.display = 'none'; }
+function showInfoToast(msg) { // アンドゥなしの案内トースト
+  var el = document.getElementById('toast');
+  el.innerHTML = escapeHtml(msg);
+  el.style.display = 'flex';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 3000);
+}
 
 /* ===== カスタム選択モーダル（3択対応・confirm代替） ===== */
 function showChoice(text, buttons) {
@@ -565,21 +589,26 @@ function confirmNg(user, date, cb) {
   } else { cb(true); }
 }
 
-function tryPlace(userId, date, slot) {
+function tryPlace(userId, date, slot, type) {
+  type = type || 'monitoring';
   var user = userById(userId);
   var mk = monthKeyOf(date);
   var list = appData.placements[mk] || [];
-  if (!isSlotFree(list, date, slot) || isPlacedInMonth(list, userId)) return;
+  if (!isSlotFree(list, date, slot)) return;
+  if (type === 'monitoring' && hasMonitoringInMonth(list, userId)) {
+    showInfoToast('今月のモニタリングは配置済みです。種別を変更してください');
+    return;
+  }
   confirmNg(user, date, function (ok) {
     if (!ok) { renderAll(); return; }
     snapshotUndo();
-    var r = addPlacement(list, userId, date, slot, SLOT_TIMES[slot]);
+    var r = addPlacement(list, userId, date, slot, SLOT_TIMES[slot], type);
     if (!r.ok) { renderAll(); return; }
     appData.placements[mk] = r.list;
     saveData();
-    var afterReserve = consumeReserveMode(userId, date); // Task 7 で定義（それまではダミー）
+    var afterReserve = consumeReserveMode(userId, date);
     renderAll();
-    if (!afterReserve) showToast(user.name + 'さんを ' + Number(date.slice(8, 10)) + '日' + ['①', '②', '③'][slot - 1] + ' に配置しました');
+    if (!afterReserve) showToast(user.name + 'さんを ' + Number(date.slice(8, 10)) + '日' + SLOT_LABELS[slot - 1] + ' に配置しました');
   });
 }
 
@@ -633,7 +662,7 @@ function toggleDone(date, slot) {
     return;
   }
   p.done = true;
-  if (isPlacedInMonth(nextList, p.userId)) { // 予約済み→ダイアログなし
+  if (hasMonitoringInMonth(nextList, p.userId)) { // 予約済み→ダイアログなし
     saveData();
     renderAll();
     return;

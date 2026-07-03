@@ -8,9 +8,9 @@
 | 項目 | 内容 |
 |------|------|
 | フォルダ | `C:\Users\kkmh2\claude\訪問調整` |
-| 状態 | 設計フェーズ完了（案A承認済み・設計書v2レビュー反映済み・ユーザーの最終確認待ち） |
+| 状態 | 初版完成＋**4枠化・種別改修 完了（2026-07-03・受け入れ9項目PASS）**。公開はオーナー指示待ち |
 | 形式 | 案A確定：単一HTML + localStorage（`visit-planner.html`） |
-| 設計書 | `docs/superpowers/specs/2026-07-02-visit-planner-design.md`（v2） |
+| 設計書 | 初版: `docs/superpowers/specs/2026-07-02-visit-planner-design.md`（v2）／改修: `2026-07-03-visit-planner-4slots-types-design.md` |
 
 ## コンセプト（ユーザーのイメージ）
 
@@ -52,11 +52,22 @@
 
 ## 次にやること（再開時）
 
-**実装は全タスク完了（Task 1〜9）。最終ホールブランチレビュー＋Important 1件の修正まで完了（`b63f215`）。**
+**初版（Task 1〜9）＋4枠化・種別改修（2026-07-03）まで完了。**
 
 - 残り：GitHub Pages公開はオーナーの指示があってから（他アプリと同方式：リポジトリ作成→index.htmlコピー→push）
-- 進捗台帳＝`.superpowers/sdd/progress.md`（Task 9の総合動作確認・最終レビューの全記録あり）
+- 進捗台帳＝`.superpowers/sdd/progress.md`（初版＋改修の全記録あり）
 - 次版への改善候補（出荷可・任意）：月ナビで予約モード自動解除／renderAll時のポップオーバー閉じ／初回手動配置時の月初期化マーク／sanitizeDataのID重複排除
+
+## 4枠化＋種別改修（2026-07-03・完了）
+
+- **1日4枠**：午前①10:00／午前②11:00／午後①14:00／午後②15:30（配置後に時刻手入力変更可）
+- **種別**：モニタ（紫 `--type-mon`）／会議（紺 `--type-meet`）／他（グレー `--type-other`）。ピースは色帯4px＋チップ表示
+- **プール＝今月モニタ未配置の人**。プールからの配置は常にモニタ。会議・他は「空き枠クリック→配置ポップオーバー」（全員selectから選択・種別3ボタン）
+- **モニタは月1件まで**（2件目は showInfoToast で拒否）。会議・他は制限なし。✓の来月予約フローはモニタのみ
+- **データ v2**：placement に `type` 追加。v1データは sanitizeData が自動移行（旧①→午後①・旧②→午後②・旧③はプールへ戻し `migratedPooled` でバナー通知）。localStorage キーは `visit-planner-v1` のまま
+- 実装コミット：`2595af0`（CORE・TDD 24テスト）→ `2a76321`（描画・CSS）→ `66d6dae`（配置ポップオーバー）→ `4028d6e`（詳細種別切替・✓分岐）
+- 検証：`node --test tests/core.test.js` 24/24 PASS＋実ブラウザ注入テスト30アサーションPASS＋390pxスクショ確認（受け入れ9項目すべてPASS）
+- 検証の学び：Playwright evaluate はクラッシュするため「サーバーでスクリプト注入→document.title で結果回収」方式が安定
 
 ## 実装進捗（2026-07-03時点）
 

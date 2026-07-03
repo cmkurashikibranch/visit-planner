@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>訪問調整アプリ 再開メモ 2026-07-03</title>
+<style>
+  :root { --accent: #2563eb; --accent-dark: #1d4ed8; --accent-bg: #eff6ff; --accent-soft: #dbeafe; }
+  @page { size: A4 portrait; margin: 14mm 13mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Yu Gothic", "Meiryo", sans-serif;
+    color: #1a1a1a; line-height: 1.5; font-size: 10.5pt; margin: 0;
+  }
+  h1 { font-size: 16pt; margin: 0 0 2px; border-bottom: 3px solid var(--accent); padding-bottom: 4px; }
+  .date { color: #666; font-size: 9pt; margin-bottom: 10px; }
+  h2 { font-size: 12pt; background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 4px; margin: 14px 0 6px; }
+  h3 { font-size: 11pt; margin: 10px 0 4px; color: var(--accent-dark); }
+  pre {
+    background: #f4f6fb; border: 1px solid #c7d4ee; border-radius: 5px;
+    padding: 7px 9px; font-family: "Consolas", monospace; font-size: 8.7pt;
+    line-height: 1.35; white-space: pre; overflow: visible; margin: 6px 0;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 9.3pt; }
+  th, td { border: 1px solid #bbb; padding: 4px 7px; text-align: left; vertical-align: top; }
+  th { background: var(--accent-soft); }
+  .done { color: var(--accent-dark); font-weight: bold; }
+  .todo { color: #c0392b; font-weight: bold; }
+  .box { border: 1.5px solid #f0a500; background: #fff8e8; border-radius: 6px; padding: 8px 11px; margin: 8px 0; font-size: 9.5pt; }
+  .next { border: 2px solid var(--accent); background: var(--accent-bg); border-radius: 6px; padding: 9px 12px; margin: 8px 0; }
+  ul, ol { margin: 4px 0 4px 0; padding-left: 20px; }
+  li { margin: 2px 0; }
+  code { background: #eef1f7; padding: 1px 4px; border-radius: 3px; font-family: "Consolas", monospace; font-size: 9pt; }
+  .small { font-size: 8.6pt; color: #555; }
+  a { color: var(--accent-dark); }
+</style>
+</head>
+<body>
+
+<h1>📋 訪問調整アプリ ── 次回の再開メモ</h1>
+<div class="date">作成：2026-07-03（4枠化・種別改修＋公開まで完了時点） ／ 次回：ここから再開</div>
+
+<h2>① まず思い出す：これは何をするものか</h2>
+<p>ケアマネの月間訪問調整を「利用者の名前ピースを月間カレンダーにはめ込む」操作で見える化するアプリ。
+ブラウザだけで動く1ファイル（<code>visit-planner.html</code>）で、データはブラウザ内に自動保存されます（サーバー不要）。
+今日は<b>1日3枠→4枠</b>への変更と、<b>訪問の種別（モニタリング／担当者会議／その他）</b>の区別を追加し、
+Web上にも公開しました。</p>
+<pre>
+未配置プール                    月間カレンダー（1日4枠・種別つき）
+[山田さん ⚠火NG]                ┌──────────────────┐
+[佐藤さん]        ──はめ込む──▶ │ 15(水)      2/4    │
+[鈴木さん]                      │ ┃紫 モニタ 山田さん ✓│ 午前①
+ …                             │ ┃紺 会議  山田さん ○│ 午前②（同じ人を追加配置）
+                                │   午後①            │ ←空き枠クリックで誰でも配置
+                                │   午後②            │
+                                └──────────────────┘
+プール＝「今月モニタリングが済んでいない人」。モニタを置くとプールから消える。
+会議やその他は空き枠を直接クリックして配置（プールには影響しない・月に何件でもOK）。
+</pre>
+
+<h2>② 今日できたこと（すべて2026-07-03の1日で）</h2>
+<table>
+  <tr><th>項目</th><th>状態</th><th>メモ</th></tr>
+  <tr><td>前回セッションの取り違え解消</td><td class="done">✅</td><td>「スケジュール管理」と「訪問調整」を混同していたのを訂正し、ローカルで実物を確認</td></tr>
+  <tr><td>改修の壁打ち（4枠化・種別）</td><td class="done">✅</td><td>種別は配置時に選ぶ／月2件以上OK／プールはモニタ専用に確定</td></tr>
+  <tr><td>設計書</td><td class="done">✅</td><td><code>docs/superpowers/specs/2026-07-03-visit-planner-4slots-types-design.md</code></td></tr>
+  <tr><td>実装計画（Task1〜5・全コード付き）</td><td class="done">✅</td><td><code>docs/superpowers/plans/2026-07-03-visit-planner-4slots-types.md</code></td></tr>
+  <tr><td>Task 1：計算ロジックを4枠・種別対応に改修</td><td class="done">✅</td><td>テスト24本パス（TDD）・旧データの自動移行つき</td></tr>
+  <tr><td>Task 2：カレンダー4枠表示・色チップ</td><td class="done">✅</td><td>モニタ=紫／会議=紺／その他=グレー</td></tr>
+  <tr><td>Task 3：空き枠クリックで配置</td><td class="done">✅</td><td>利用者と種別を選んで配置するポップアップを新設</td></tr>
+  <tr><td>Task 4：配置済みピースの種別変更</td><td class="done">✅</td><td>クリックで後から種別を変更できる・✓の来月予約はモニタのみ</td></tr>
+  <tr><td>Task 5：総合動作確認</td><td class="done">✅</td><td>受け入れ9項目すべてブラウザ実表示でPASS</td></tr>
+  <tr><td>GitHubで一般公開</td><td class="done">✅</td><td>下記「公開先」を参照</td></tr>
+</table>
+<div class="next">🎉 <b>今日1日で「改修」と「公開」の両方が完了。</b>アプリは今、スマホからもURLを開くだけで使える状態です。</div>
+
+<h2>③ 公開先</h2>
+<table>
+  <tr><th>項目</th><th>内容</th></tr>
+  <tr><td>公開URL</td><td><a href="https://cmkurashikibranch.github.io/visit-planner/">https://cmkurashikibranch.github.io/visit-planner/</a></td></tr>
+  <tr><td>GitHubリポジトリ</td><td><a href="https://github.com/cmkurashikibranch/visit-planner">https://github.com/cmkurashikibranch/visit-planner</a>（パブリック）</td></tr>
+  <tr><td>開発用ファイル</td><td><code>visit-planner.html</code>（今後の改修はここを直す）</td></tr>
+  <tr><td>公開用ファイル</td><td><code>index.html</code>（<code>visit-planner.html</code>のコピー・2つを同期させる運用）</td></tr>
+</table>
+<div class="box">⚠ <b>データはこの端末だけ</b><br>
+公開したのは「アプリの入れ物」で、データ（利用者・配置）はブラウザごとに別々に保存されます。
+PCで登録した利用者はスマホには出てきません。端末をまたいで使いたい場合は
+「利用者管理 → JSONエクスポート/インポート」で手動コピーが必要です。</div>
+
+<h2>④ 次にやること（ここから再開）</h2>
+<div class="next"><b>今すぐの宿題はありません。</b>改修も公開も完了しているので、次は「実際に1か月使ってみて気になった点」が出発点になります。</div>
+<ol>
+  <li>まずは公開URLをスマホのホーム画面に追加して、普段使いしてみる</li>
+  <li>使ってみて「ここが使いにくい」「これが欲しい」が出てきたら、Claude Codeに「訪問調整アプリを直したい」と伝える</li>
+  <li>今後の直し方は毎回同じ：<span class="todo">visit-planner.html を修正 → index.html にコピー → git push</span>（Claudeにやらせて大丈夫です）</li>
+  <li>次版への改善候補（初版レビューからの持ち越し・急ぎではない）：月ナビで予約モード自動解除／初回手動配置時の月初期化マーク／利用者IDの重複排除</li>
+</ol>
+
+<div class="box">💡 <b>今日の学び</b><br>
+・種別の切り分けは「配置時に選ぶ」「プールはモニタリング専用」という2つのルールで整理すると、
+既存の"1人1ピース"という仕組みを壊さずに済んだ<br>
+・ブラウザの自動操作（Playwright）が不安定なときは、サーバー側で確認用スクリプトをページに仕込み、
+実際のボタン操作を自動でなぞらせて結果をタイトルバーに出す方法が安定して使えた（他のアプリ改修でも使える手法）</div>
+
+<p class="small">参照：初版設計書＝<code>docs/superpowers/specs/2026-07-02-visit-planner-design.md</code>／
+改修設計書＝<code>docs/superpowers/specs/2026-07-03-visit-planner-4slots-types-design.md</code>／
+改修実装計画＝<code>docs/superpowers/plans/2026-07-03-visit-planner-4slots-types.md</code>／
+進捗台帳＝<code>.superpowers/sdd/progress.md</code>／
+テスト実行＝<code>node --test tests/core.test.js</code>（24本）</p>
+
+</body>
+</html>

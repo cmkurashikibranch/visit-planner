@@ -658,7 +658,7 @@ function returnToPool(date, slot) {
   saveData();
   closePopover();
   renderAll();
-  showToast(user.name + 'さんをプールに戻しました');
+  showToast(user.name + 'さんの配置を取り消しました');
 }
 
 /* ===== 訪問済み✓ → 来月予約 ===== */
@@ -680,6 +680,7 @@ function toggleDone(date, slot) {
     return;
   }
   p.done = true;
+  if (p.type !== 'monitoring') { saveData(); renderAll(); return; } // 会議・その他は完了のみ（来月予約なし）
   if (hasMonitoringInMonth(nextList, p.userId)) { // 予約済み→ダイアログなし
     saveData();
     renderAll();
@@ -812,9 +813,10 @@ function openDetail(date, slot, anchorEl) {
   pop.innerHTML = '<div class="name">' + escapeHtml(user.name) + 'さん</div>' +
     '<div class="rows">' +
     '<div>時刻: <input type="time" id="dp-time" value="' + escapeHtml(p.time) + '"></div>' +
+    '<div class="type-btns" id="dp-types">' + typeButtonsHtml(p.type) + '</div>' +
     (user.memo ? '<div style="color:var(--text-2)">' + escapeHtml(user.memo) + '</div>' : '') +
     '<div><button class="btn" id="dp-move">移動</button> ' +
-    '<button class="btn" id="dp-pool">プールに戻す</button></div>' +
+    '<button class="btn" id="dp-pool">配置を取り消す</button></div>' +
     '<div style="text-align:right"><button class="btn" id="dp-close">閉じる</button></div></div>';
   document.body.appendChild(pop);
   var rect = anchorEl.getBoundingClientRect();
@@ -824,6 +826,23 @@ function openDetail(date, slot, anchorEl) {
     p.time = e.target.value || p.time;
     saveData();
   };
+  bindTypeButtons(document.getElementById('dp-types'), function (t) {
+    if (t === p.type) return;
+    if (t === 'monitoring' &&
+        hasMonitoringInMonth(curList().filter(function (x) { return x !== p; }), p.userId)) {
+      showInfoToast('今月のモニタリングは配置済みのため変更できません');
+      var c = document.getElementById('dp-types');
+      c.querySelectorAll('.type-btn').forEach(function (x) { x.classList.toggle('active', x.dataset.type === p.type); });
+      return;
+    }
+    var wasMonitoring = p.type === 'monitoring';
+    p.type = t;
+    saveData();
+    renderAll();
+    if (wasMonitoring && !hasMonitoringInMonth(curList(), p.userId)) {
+      showInfoToast(user.name + 'さんがプールに戻りました（モニタリング未配置）');
+    }
+  });
   document.getElementById('dp-move').onclick = function () {
     closePopover();
     enterSelectMode(p.userId, { date: date, slot: slot });

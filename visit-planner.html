@@ -99,6 +99,12 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 .popover .name { font-weight: 700; margin-bottom: 6px; }
 .popover input[type=time] { padding: 4px; border: 1px solid var(--line); border-radius: 6px; }
 .popover .rows { display: flex; flex-direction: column; gap: 6px; }
+.popover select { padding: 4px; border: 1px solid var(--line); border-radius: 6px;
+  width: 100%; font-size: 13px; }
+.type-btns { display: flex; gap: 4px; }
+.type-btn.active[data-type=monitoring] { background: var(--type-mon); border-color: var(--type-mon); color: #fff; }
+.type-btn.active[data-type=meeting]    { background: var(--type-meet); border-color: var(--type-meet); color: #fff; }
+.type-btn.active[data-type=other]      { background: var(--type-other); border-color: var(--type-other); color: #fff; }
 .choice-back { position: fixed; inset: 0; background: rgba(15,23,42,.45);
   display: flex; align-items: center; justify-content: center; z-index: 300; }
 .choice { background: var(--card); border-radius: 14px; padding: 18px;
@@ -744,6 +750,55 @@ function highlightSelected() {
   if (el) el.classList.add('selected');
 }
 
+/* ===== 種別ボタン共通部品 ===== */
+function typeButtonsHtml(selected) {
+  return Object.keys(TYPES).map(function (k) {
+    return '<button class="btn type-btn' + (k === selected ? ' active' : '') + '" data-type="' + k + '">' + TYPES[k].label + '</button>';
+  }).join('');
+}
+function bindTypeButtons(container, onChange) {
+  container.querySelectorAll('.type-btn').forEach(function (b) {
+    b.onclick = function () {
+      container.querySelectorAll('.type-btn').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      onChange(b.dataset.type);
+    };
+  });
+}
+
+/* ===== 空き枠クリック→配置ポップオーバー ===== */
+function openPlacePopover(date, slot, anchorEl) {
+  closePopover();
+  if (!appData.users.length) { showInfoToast('先に利用者管理から登録してください'); return; }
+  var list = curList();
+  var sorted = appData.users.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+  var selType = 'monitoring';
+  var pop = document.createElement('div');
+  pop.className = 'popover';
+  pop.id = 'detail-popover';
+  pop.innerHTML = '<div class="name">' + Number(date.slice(5, 7)) + '/' + Number(date.slice(8, 10)) + ' ' + SLOT_LABELS[slot - 1] + ' に配置</div>' +
+    '<div class="rows">' +
+    '<div><select id="pp-user">' + sorted.map(function (u) {
+      return '<option value="' + u.id + '">' + escapeHtml(u.name) + 'さん' +
+        (hasMonitoringInMonth(list, u.id) ? '（モニタ済）' : '') +
+        (u.ngDays.length ? ' ' + ngBadgeText(u) : '') + '</option>';
+    }).join('') + '</select></div>' +
+    '<div class="type-btns" id="pp-types">' + typeButtonsHtml(selType) + '</div>' +
+    '<div style="text-align:right"><button class="btn" id="pp-cancel">キャンセル</button> ' +
+    '<button class="btn primary" id="pp-place">配置</button></div></div>';
+  document.body.appendChild(pop);
+  var rect = anchorEl.getBoundingClientRect();
+  pop.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
+  pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  bindTypeButtons(document.getElementById('pp-types'), function (t) { selType = t; });
+  document.getElementById('pp-cancel').onclick = closePopover;
+  document.getElementById('pp-place').onclick = function () {
+    var uid = Number(document.getElementById('pp-user').value);
+    closePopover();
+    tryPlace(uid, date, slot, selType);
+  };
+}
+
 /* ===== 詳細ポップオーバー ===== */
 function openDetail(date, slot, anchorEl) {
   if (reserveMode) return;
@@ -983,6 +1038,8 @@ function init() {
       else tryMove(sm.source, { date: date, slot: slot });
     } else if (filled) {
       openDetail(date, slot, slotEl);
+    } else {
+      openPlacePopover(date, slot, slotEl);
     }
   };
   // ドロップ先：プール（配置済み→未配置に戻す） — 1回だけ登録

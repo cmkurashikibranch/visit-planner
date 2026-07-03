@@ -52,12 +52,10 @@
 
 ## 次にやること（再開時）
 
-**サブエージェント駆動開発の続きから（Task 4〜9）**
+**実装は全タスク完了（Task 1〜9）。最終ホールブランチレビューまで完了。**
 
-1. `superpowers:subagent-driven-development` で実装再開。進捗台帳＝`.superpowers/sdd/progress.md`（Task 1〜8完了済み・再実行しない）
-2. 実装計画：`docs/superpowers/plans/2026-07-02-visit-planner.md`（Task 9: スマホ対応＋総合動作確認 から）
-3. **Task 9でブラウザ実表示確認を必ず実施**（Task 3〜8はすべて静的検証のみ。UI全機能＝配置・D&D・ポップオーバー・✓予約フロー・月替わりダイアログが未目視）
-4. Task 9完了後：最終ホールブランチレビュー → finishing-a-development-branch
+- 残り：GitHub Pages公開はオーナーの指示があってから（他アプリと同方式：リポジトリ作成→index.htmlコピー→push）
+- 進捗台帳＝`.superpowers/sdd/progress.md`（Task 9の総合動作確認の全記録あり）
 
 ## 実装進捗（2026-07-03時点）
 
@@ -71,7 +69,7 @@
 | Task 6: D&D（PC専用）＋NG事前ハイライト＋pendingDrop | ✅ レビュー承認 | `29f6d48`＋`ffa50c9` |
 | Task 7: ✓トグル＋来月予約フロー（3択モーダル） | ✅ レビュー承認 | `5b8aad7` |
 | Task 8: 月替わりダイアログ＋今月リセット | ✅ レビュー承認 | `84bc219` |
-| Task 9: スマホ対応＋総合動作確認 | 🔲 未着手 | |
+| Task 9: スマホ対応＋総合動作確認 | ✅ レビュー承認・全10項目PASS | `d709acb`＋docs |
 
 - テスト：`node --test tests/core.test.js` → 16/16 PASS
 - レビューでのMinor指摘（最終レビューで棚卸し）：module.exports残骸／sanitizeDataのID重複未排除／tryPlace・tryMoveの早期returnがrenderAll非呼出（実害なし）／予約モード中の月ナビ移動が可能（仕様外メモ）／resetCurrentMonthのrenderAll二重呼び（実害なし）

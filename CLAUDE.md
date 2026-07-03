@@ -8,9 +8,24 @@
 | 項目 | 内容 |
 |------|------|
 | フォルダ | `C:\Users\kkmh2\claude\訪問調整` |
-| 状態 | 初版完成＋**4枠化・種別改修 完了（2026-07-03・受け入れ9項目PASS）**。公開はオーナー指示待ち |
+| 状態 | 初版完成＋**4枠化・種別改修 完了（2026-07-03・受け入れ9項目PASS）**。**GitHub Pages 公開済み（2026-07-03）** |
 | 形式 | 案A確定：単一HTML + localStorage（`visit-planner.html`） |
 | 設計書 | 初版: `docs/superpowers/specs/2026-07-02-visit-planner-design.md`（v2）／改修: `2026-07-03-visit-planner-4slots-types-design.md` |
+| リポジトリ | `https://github.com/cmkurashikibranch/visit-planner`（パブリック・masterブランチ） |
+| 公開URL | `https://cmkurashikibranch.github.io/visit-planner/` |
+| エントリ | `index.html`（`visit-planner.html` のコピー。**2ファイル同期が必要**・他アプリと同じ運用） |
+
+## 今後の更新手順
+
+```powershell
+cd "C:\Users\kkmh2\claude\訪問調整"
+copy visit-planner.html index.html
+git add -A
+git commit -m "update: 変更内容"
+git push
+```
+
+数分後に公開URLへ反映される。データは各端末のブラウザ内（localStorage）に保存されるため、公開後もデータが共有されるわけではない点に注意（PCで入れたデータはPCのみ。共有したければJSONエクスポート/インポート）。
 
 ## コンセプト（ユーザーのイメージ）
 

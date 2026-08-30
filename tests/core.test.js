@@ -12,7 +12,7 @@ const core = new Function(m[1] + `
              isSlotFree, hasMonitoringInMonth, countUnplaced, addPlacement, movePlacement,
              copyFromPrevMonth, sanitizeData, SLOT_TIMES, SLOT_LABELS, TYPES,
              isSunday, holidayKindOf, isSlotBlocked, availableSlotCount,
-             placementsBlockedBy, kanaKey, compareUsers, HOLIDAY_KINDS, CAL_DOWS };`)();
+             placementsBlockedBy, conflictSummary, kanaKey, compareUsers, HOLIDAY_KINDS, CAL_DOWS };`)();
 
 // 配置オブジェクトの省略記法（新形式・v2）
 const P = (o) => Object.assign(
@@ -432,4 +432,25 @@ test('CAL_DOWS：月〜土の6列（日曜を含まない）', () => {
   assert.deepStrictEqual(core.CAL_DOWS, [1, 2, 3, 4, 5, 6]);
   assert.strictEqual(core.isSunday('2026-07-05'), true);
   assert.strictEqual(core.isSunday('2026-07-06'), false);
+});
+
+test('conflictSummary：モニタはプールへ戻る・会議と他は削除される', () => {
+  const mon = P({ type: 'monitoring' });
+  const meet = P({ userId: 2, slot: 2, type: 'meeting' });
+  const other = P({ userId: 3, slot: 3, type: 'other' });
+  assert.strictEqual(core.conflictSummary([mon]), 'モニタ 1件はプールへ戻ります');
+  assert.strictEqual(core.conflictSummary([meet, other]), '会議・他 2件は削除されます');
+  assert.strictEqual(core.conflictSummary([mon, meet]),
+    'モニタ 1件はプールへ戻ります／会議・他 1件は削除されます');
+  assert.strictEqual(core.conflictSummary([]), '');
+  // past=true は完了形（トースト用）
+  assert.strictEqual(core.conflictSummary([mon, meet], true),
+    'モニタ 1件をプールへ戻しました／会議・他 1件を削除しました');
+});
+
+test('sanitizeData：holidays の値が文字列でなければ弾く（配列の素通しを防ぐ）', () => {
+  const r = core.sanitizeData({ version: 3, users: [], placements: {},
+    holidays: { '2026-09-01': ['full'], '2026-09-02': 'am' }, initializedMonths: [], nextId: 1 });
+  assert.deepStrictEqual(Object.keys(r.data.holidays), ['2026-09-02']);
+  assert.strictEqual(r.warned, true);
 });

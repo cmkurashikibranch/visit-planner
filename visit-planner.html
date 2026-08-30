@@ -236,6 +236,16 @@ function placementsBlockedBy(list, dateStr, kind) {
   return list.filter(function (p) { return p.date === dateStr && slots.indexOf(p.slot) !== -1; });
 }
 
+/* 休みで外れる予定の内訳。モニタはプールへ戻るが、会議・他は戻る先が無く消える */
+function conflictSummary(conflicts, past) {
+  var mon = conflicts.filter(function (p) { return p.type === 'monitoring'; }).length;
+  var del = conflicts.length - mon;
+  var parts = [];
+  if (mon) parts.push('モニタ ' + mon + '件' + (past ? 'をプールへ戻しました' : 'はプールへ戻ります'));
+  if (del) parts.push('会議・他 ' + del + '件' + (past ? 'を削除しました' : 'は削除されます'));
+  return parts.join('／');
+}
+
 /* ふりがなの並べ替えキー：カタカナ→ひらがな、空白は無視 */
 function kanaKey(s) {
   if (typeof s !== 'string') return '';
@@ -343,7 +353,8 @@ function sanitizeData(raw) {
   } else if (raw.users !== undefined) { warned = true; }
   if (raw.holidays && typeof raw.holidays === 'object' && !Array.isArray(raw.holidays)) {
     Object.keys(raw.holidays).forEach(function (d) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && HOLIDAY_KINDS[raw.holidays[d]] && !isSunday(d)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && typeof raw.holidays[d] === 'string' &&
+          HOLIDAY_KINDS[raw.holidays[d]] && !isSunday(d)) {
         data.holidays[d] = raw.holidays[d];
       } else { warned = true; }
     });
@@ -1019,11 +1030,12 @@ function applyHoliday(date, kind) {
     saveData();
     renderAll();
     showToast(dayLabel + 'を「' + HOLIDAY_KINDS[kind].label + '」にしました' +
-      (conflicts.length ? '（' + conflicts.length + '件をプールへ戻しました）' : ''));
+      (conflicts.length ? '（' + conflictSummary(conflicts, true) + '）' : ''));
   };
   if (!conflicts.length) { commit(); return; }
   showChoice(dayLabel + 'を「' + HOLIDAY_KINDS[kind].label + '」にすると、\n' +
-    '入っている予定 ' + conflicts.length + '件 をプールへ戻します。\nよろしいですか？', [
+    '入っている予定 ' + conflicts.length + '件 が外れます。\n' +
+    conflictSummary(conflicts) + '。\nよろしいですか？', [
     { label: 'キャンセル', value: 'no' },
     { label: '休みにする', value: 'yes', primary: true }
   ]).then(function (v) { if (v === 'yes') commit(); });

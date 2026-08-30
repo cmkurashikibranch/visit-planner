@@ -9,7 +9,8 @@
   --bg: #F8FAFC; --card: #FFFFFF; --accent: #2563EB;
   --text: #0F172A; --text-2: #64748B; --line: #E2E8F0;
   --visit: #0C9E8E; --done-bg: #F1F5F9; --ng: #E03F3F; --warn-bg: #FEF3C7;
-  --type-mon: #7C3AED; --type-meet: #3B50A0; --type-other: #6B7280;
+  --type-mon: #7C3AED; --type-meet: #D93025; --type-other: #3B50A0;
+  --holiday: #B45309; --holiday-bg: #F5F5F4;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text);
@@ -23,7 +24,7 @@ header button { cursor: pointer; border: 1px solid var(--line); background: var(
 #counter { color: var(--text-2); }
 #counter .num { color: var(--accent); font-weight: 700; }
 #banner { display: none; padding: 6px 12px; background: var(--warn-bg); font-size: 13px; }
-main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
+main { display: grid; grid-template-columns: 340px 1fr; gap: 10px;
   padding: 10px; height: calc(100vh - 49px); }
 /* プール */
 #pool { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
@@ -31,26 +32,34 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 #pool h2 { font-size: 13px; color: var(--text-2); margin-bottom: 6px; }
 #pool-search { width: 100%; padding: 5px 8px; border: 1px solid var(--line);
   border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
-#pool-list { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+#pool-list { overflow-y: auto; flex: 1; min-height: 0; display: grid; align-content: start;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+#pool-list .empty { grid-column: 1 / -1; }
 .piece { background: var(--card); border: 1px solid var(--visit); border-left: 4px solid var(--visit);
-  border-radius: 8px; padding: 4px 6px; cursor: pointer; font-size: 13px; user-select: none; }
+  border-radius: 8px; padding: 4px 6px; cursor: pointer; font-size: 13px; user-select: none;
+  overflow-wrap: anywhere; line-height: 1.35; }
 .piece .ng-badge { color: var(--ng); font-size: 11px; margin-left: 4px; }
 .piece.selected { outline: 2px solid var(--accent); }
 /* カレンダー */
 #calendar { overflow-y: auto; min-height: 0; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
 .cal-dow { text-align: center; font-size: 11px; color: var(--text-2); padding: 2px 0; }
 .cal-cell { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
   padding: 2px; min-height: 106px; }
 .cal-cell.other-month { background: transparent; border: none; }
-.cal-cell .day-head { display: flex; justify-content: space-between; font-size: 11px;
-  color: var(--text-2); padding: 0 2px; }
-.cal-cell .day-head .fill { color: var(--accent); }
+.cal-cell .day-head { display: flex; align-items: center; gap: 4px; font-size: 11px;
+  color: var(--text-2); padding: 0 2px; cursor: pointer; border-radius: 4px; }
+.cal-cell .day-head:hover { background: var(--done-bg); }
+.cal-cell .day-head .fill { color: var(--accent); margin-left: auto; }
+.cal-cell .day-head .hol-tag { color: var(--holiday); font-weight: 700; }
 .cal-cell.today .day-num { color: var(--accent); font-weight: 700; }
 .cal-slot { border: 1px dashed var(--line); border-radius: 6px; margin-top: 2px;
   min-height: 22px; font-size: 12px; display: flex; align-items: center;
   padding: 1px 4px; color: var(--text-2); }
 .cal-slot .slot-label { opacity: .45; font-size: 11px; }
+.cal-slot.blocked { border-style: solid; border-color: var(--line); background: var(--holiday-bg);
+  color: var(--holiday); justify-content: center; font-size: 11px; cursor: default; }
+.cal-cell.holiday { background: #FFFBEB; }
 .cal-slot.filled { border-style: solid; border-color: var(--visit); color: var(--text);
   border-left-width: 4px; justify-content: space-between; cursor: pointer; }
 .cal-slot.filled.type-monitoring { border-color: var(--type-mon); }
@@ -105,6 +114,8 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 .type-btn.active[data-type=monitoring] { background: var(--type-mon); border-color: var(--type-mon); color: #fff; }
 .type-btn.active[data-type=meeting]    { background: var(--type-meet); border-color: var(--type-meet); color: #fff; }
 .type-btn.active[data-type=other]      { background: var(--type-other); border-color: var(--type-other); color: #fff; }
+.hol-btn.active { background: var(--holiday); border-color: var(--holiday); color: #fff; }
+.btn[disabled] { opacity: .45; cursor: default; }
 .choice-back { position: fixed; inset: 0; background: rgba(15,23,42,.45);
   display: flex; align-items: center; justify-content: center; z-index: 300; }
 .choice { background: var(--card); border-radius: 14px; padding: 18px;
@@ -114,7 +125,7 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
 @media (max-width: 767px) {
   main { grid-template-columns: 1fr; height: auto; }
   #pool { max-height: 30vh; }
-  .cal-grid { min-width: 560px; }
+  .cal-grid { min-width: 540px; }
   #calendar { overflow-x: auto; }
   .cal-slot .check { min-width: 32px; padding: 4px 0; } /* タップしやすく */
 }
@@ -150,6 +161,7 @@ main { display: grid; grid-template-columns: 200px 1fr; gap: 10px;
     <div class="user-form">
       <div id="form-title" style="font-size:13px;color:var(--text-2)">新規登録</div>
       <input type="text" id="uf-name" placeholder="名前（必須）">
+      <input type="text" id="uf-kana" placeholder="ふりがな（ひらがな・任意／五十音順の並べ替えに使います）">
       <div class="ng-checks" id="uf-ng"></div>
       <input type="text" id="uf-memo" placeholder="自由メモ（例：午前は通所）">
       <div>
@@ -174,9 +186,15 @@ var SLOT_TIMES  = { 1: '10:00', 2: '11:00', 3: '14:00', 4: '15:30' };
 var SLOT_LABELS = ['午前①', '午前②', '午後①', '午後②'];
 var TYPES = {
   monitoring: { label: 'モニタ', color: '#7C3AED' },
-  meeting:    { label: '会議',   color: '#3B50A0' },
-  other:      { label: '他',     color: '#6B7280' }
+  meeting:    { label: '会議',   color: '#D93025' },
+  other:      { label: '他',     color: '#3B50A0' }
 };
+var HOLIDAY_KINDS = {
+  full: { label: '休み',  slots: [1, 2, 3, 4] },
+  am:   { label: 'AM休', slots: [1, 2] },
+  pm:   { label: 'PM休', slots: [3, 4] }
+};
+var CAL_DOWS = [1, 2, 3, 4, 5, 6]; // 月〜土（日曜の欄は持たない）
 
 function pad2(n) { return String(n).padStart(2, '0'); }
 
@@ -193,6 +211,49 @@ function dayOfWeek(dateStr) {
 
 function isNgDay(user, dateStr) {
   return Array.isArray(user.ngDays) && user.ngDays.indexOf(dayOfWeek(dateStr)) !== -1;
+}
+
+function isSunday(dateStr) { return dayOfWeek(dateStr) === 0; }
+
+function holidayKindOf(holidays, dateStr) {
+  var k = holidays && holidays[dateStr];
+  return HOLIDAY_KINDS[k] ? k : null;
+}
+
+function isSlotBlocked(holidays, dateStr, slot) {
+  var k = holidayKindOf(holidays, dateStr);
+  return !!k && HOLIDAY_KINDS[k].slots.indexOf(slot) !== -1;
+}
+
+function availableSlotCount(holidays, dateStr) {
+  var k = holidayKindOf(holidays, dateStr);
+  return k ? 4 - HOLIDAY_KINDS[k].slots.length : 4;
+}
+
+/* dateStr を kind の休みにしたとき弾き出される配置 */
+function placementsBlockedBy(list, dateStr, kind) {
+  var slots = HOLIDAY_KINDS[kind] ? HOLIDAY_KINDS[kind].slots : [];
+  return list.filter(function (p) { return p.date === dateStr && slots.indexOf(p.slot) !== -1; });
+}
+
+/* ふりがなの並べ替えキー：カタカナ→ひらがな、空白は無視 */
+function kanaKey(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/[\u30a1-\u30f6]/g, function (c) {
+    return String.fromCharCode(c.charCodeAt(0) - 0x60);
+  }).replace(/[\s\u3000]/g, '');
+}
+
+/* ふりがなのある人が先（五十音順）、無い人は名前順で後ろへ */
+function compareUsers(a, b) {
+  var ka = kanaKey(a.kana), kb = kanaKey(b.kana);
+  if (ka && kb) {
+    var c = ka.localeCompare(kb, 'ja');
+    return c !== 0 ? c : a.name.localeCompare(b.name, 'ja');
+  }
+  if (ka) return -1;
+  if (kb) return 1;
+  return a.name.localeCompare(b.name, 'ja');
 }
 
 function isSlotFree(list, dateStr, slot) {
@@ -231,7 +292,7 @@ function movePlacement(list, source, target) {
   return { ok: true, list: rest.concat([moved]) };
 }
 
-function copyFromPrevMonth(prevList, existingList, users, targetMonth) {
+function copyFromPrevMonth(prevList, existingList, users, targetMonth, holidays) {
   var parts = targetMonth.split('-');
   var maxDay = daysInMonth(Number(parts[0]), Number(parts[1]));
   var placements = existingList.slice();
@@ -244,6 +305,8 @@ function copyFromPrevMonth(prevList, existingList, users, targetMonth) {
     var day = Number(p.date.slice(8, 10));
     if (day > maxDay) { pooled.push(p.userId); return; }   // 存在しない日→プール
     var date = targetMonth + '-' + pad2(day);
+    if (isSunday(date)) { pooled.push(p.userId); return; }  // 日曜→プール
+    if (isSlotBlocked(holidays, date, p.slot)) { pooled.push(p.userId); return; } // 休み→プール
     if (!isSlotFree(placements, date, p.slot)) { pooled.push(p.userId); return; } // 衝突→プール
     placements = placements.concat([{ userId: p.userId, date: date, slot: p.slot, time: p.time, type: 'monitoring', done: false, gcalEventId: null }]);
   });
@@ -251,17 +314,24 @@ function copyFromPrevMonth(prevList, existingList, users, targetMonth) {
 }
 
 function sanitizeData(raw) {
-  var data = { version: 2, users: [], placements: {}, initializedMonths: [], nextId: 1 };
+  var data = { version: 3, users: [], placements: {}, holidays: {}, initializedMonths: [], nextId: 1 };
   var warned = false;
   var migratedPooled = 0;
-  if (!raw || typeof raw !== 'object') return { data: data, warned: raw !== null && raw !== undefined, migratedPooled: 0 };
-  var isV1 = raw.version !== 2; // v1 または version欠損は旧形式として移行
+  var sundayPooled = 0;
+  var holidayPooled = 0;
+  var result = function () {
+    return { data: data, warned: warned, migratedPooled: migratedPooled,
+             sundayPooled: sundayPooled, holidayPooled: holidayPooled };
+  };
+  if (!raw || typeof raw !== 'object') { warned = raw !== null && raw !== undefined; return result(); }
+  var isV1 = raw.version !== 2 && raw.version !== 3; // v1 または version欠損は旧形式として移行
   if (Array.isArray(raw.users)) {
     raw.users.forEach(function (u) {
       if (u && typeof u.id === 'number' && typeof u.name === 'string' && u.name !== '') {
         data.users.push({
           id: u.id,
           name: u.name,
+          kana: typeof u.kana === 'string' ? u.kana : '',   // v2以前には無い＝空で補う（警告しない）
           ngDays: Array.isArray(u.ngDays)
             ? u.ngDays.filter(function (n) { return Number.isInteger(n) && n >= 0 && n <= 6; })
             : [],
@@ -271,6 +341,13 @@ function sanitizeData(raw) {
       } else { warned = true; }
     });
   } else if (raw.users !== undefined) { warned = true; }
+  if (raw.holidays && typeof raw.holidays === 'object' && !Array.isArray(raw.holidays)) {
+    Object.keys(raw.holidays).forEach(function (d) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && HOLIDAY_KINDS[raw.holidays[d]] && !isSunday(d)) {
+        data.holidays[d] = raw.holidays[d];
+      } else { warned = true; }
+    });
+  } else if (raw.holidays !== undefined) { warned = true; }
   var ids = {};
   data.users.forEach(function (u) { ids[u.id] = true; });
   if (raw.placements && typeof raw.placements === 'object' && !Array.isArray(raw.placements)) {
@@ -280,6 +357,7 @@ function sanitizeData(raw) {
       arr.forEach(function (p) {
         if (!p || !ids[p.userId] || typeof p.date !== 'string' ||
             !/^\d{4}-\d{2}-\d{2}$/.test(p.date)) { warned = true; return; }
+        if (isSunday(p.date)) { sundayPooled++; return; }   // 日曜の欄は廃止→プールへ
         var slot = p.slot;
         if (isV1) {
           if (slot === 1) slot = 3;                             // 旧①(13:00)→午後①
@@ -287,6 +365,7 @@ function sanitizeData(raw) {
           else if (slot === 3) { migratedPooled++; return; }    // 旧③は行き先なし→プールへ
           else { warned = true; return; }
         } else if ([1, 2, 3, 4].indexOf(slot) === -1) { warned = true; return; }
+        if (isSlotBlocked(data.holidays, p.date, slot)) { holidayPooled++; return; } // 休みの枠→プールへ
         var type = (p.type === 'monitoring' || p.type === 'meeting' || p.type === 'other') ? p.type : 'monitoring';
         if (!isV1 && type !== p.type) warned = true;            // v2でtype欠損・不正→修復して警告
         var mk = monthKeyOf(p.date);
@@ -311,7 +390,7 @@ function sanitizeData(raw) {
   data.users.forEach(function (u) { if (u.id > maxId) maxId = u.id; });
   data.nextId = (typeof raw.nextId === 'number' && raw.nextId > maxId) ? raw.nextId : maxId + 1;
   if (typeof raw.nextId !== 'number') warned = true;
-  return { data: data, warned: warned, migratedPooled: migratedPooled };
+  return result();
 }
 /* CORE:END */
 
@@ -336,8 +415,17 @@ function loadData() {
   var r = sanitizeData(raw);
   appData = r.data;
   if (parseFailed) showBanner('⚠ 保存データを読み込めなかったため、初期状態で起動しました');
-  else if (r.migratedPooled) showBanner('⚠ 旧データを新しい枠割り（午前2・午後2）に移行しました（' + r.migratedPooled + '件はプールに戻しました）');
-  else if (r.warned) showBanner('⚠ 一部のデータが壊れていたため修復しました');
+  else showMigrationBanner(r, '一部のデータが壊れていたため修復しました');
+}
+
+/* 移行・修復の結果をまとめて1本の帯に出す */
+function showMigrationBanner(r, fallbackMsg) {
+  var msgs = [];
+  if (r.migratedPooled) msgs.push('旧データを新しい枠割り（午前2・午後2）に移行しました（' + r.migratedPooled + '件はプールに戻しました）');
+  if (r.sundayPooled) msgs.push('日曜に入っていた予定 ' + r.sundayPooled + '件 をプールへ戻しました（日曜の欄は廃止しました）');
+  if (r.holidayPooled) msgs.push('休みの枠に入っていた予定 ' + r.holidayPooled + '件 をプールへ戻しました');
+  if (!msgs.length && r.warned) msgs.push(fallbackMsg);
+  if (msgs.length) showBanner('⚠ ' + msgs.join(' / '));
 }
 
 function saveData() {
@@ -396,10 +484,10 @@ function renderPool() {
   var list = curList();
   var unplaced = appData.users
     .filter(function (u) { return !hasMonitoringInMonth(list, u.id); })
-    .filter(function (u) { return !q || u.name.indexOf(q) !== -1; })
-    .sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+    .filter(function (u) { return !q || u.name.indexOf(q) !== -1 || kanaKey(u.kana).indexOf(kanaKey(q)) !== -1; })
+    .sort(compareUsers);
   if (!appData.users.length) {
-    listEl.innerHTML = '<div style="color:var(--text-2);font-size:12px;padding:8px">👥 利用者管理から登録してください</div>';
+    listEl.innerHTML = '<div class="empty" style="color:var(--text-2);font-size:12px;padding:8px">👥 利用者管理から登録してください</div>';
     return;
   }
   listEl.innerHTML = unplaced.map(function (u) {
@@ -412,15 +500,27 @@ function renderCalendar() {
   var grid = document.getElementById('cal-grid');
   var list = curList();
   var today = todayStr();
-  var first = new Date(viewYear, viewMonth - 1, 1).getDay(); // 月初の曜日
   var days = daysInMonth(viewYear, viewMonth);
-  var html = DOW_LABELS.map(function (l) { return '<div class="cal-dow">' + l + '</div>'; }).join('');
-  for (var i = 0; i < first; i++) html += '<div class="cal-cell other-month"></div>';
+  var html = CAL_DOWS.map(function (i) { return '<div class="cal-dow">' + DOW_LABELS[i] + '</div>'; }).join('');
+  var leadDone = false;
   for (var d = 1; d <= days; d++) {
     var date = makeDateStr(viewYear, viewMonth, d);
+    var dw = dayOfWeek(date);
+    if (dw === 0) continue;                      // 日曜の欄は持たない
+    if (!leadDone) {                             // 月初の空きセル（月曜始まり）
+      for (var i = 0; i < dw - 1; i++) html += '<div class="cal-cell other-month"></div>';
+      leadDone = true;
+    }
+    var hol = holidayKindOf(appData.holidays, date);
+    var avail = availableSlotCount(appData.holidays, date);
     var fill = 0;
     var slots = '';
     for (var s = 1; s <= 4; s++) {
+      if (isSlotBlocked(appData.holidays, date, s)) {
+        slots += '<div class="cal-slot blocked" data-date="' + date + '" data-slot="' + s + '">▨ ' +
+          HOLIDAY_KINDS[hol].label + '</div>';
+        continue;
+      }
       var p = null;
       for (var j = 0; j < list.length; j++) {
         if (list[j].date === date && list[j].slot === s) { p = list[j]; break; }
@@ -445,9 +545,13 @@ function renderCalendar() {
           '<span class="slot-label">' + SLOT_LABELS[s - 1] + '</span></div>';
       }
     }
-    html += '<div class="cal-cell' + (date === today ? ' today' : '') + '" data-date="' + date + '">' +
-      '<div class="day-head"><span class="day-num">' + d + '</span><span class="fill">' + fill + '/4</span></div>' +
-      slots + '</div>';
+    html += '<div class="cal-cell' + (date === today ? ' today' : '') + (hol ? ' holiday' : '') +
+      '" data-date="' + date + '">' +
+      '<div class="day-head" data-holhead="1" data-date="' + date + '" title="クリックで休み（休み／AM休／PM休）を設定">' +
+      '<span class="day-num">' + d + '</span>' +
+      (hol ? '<span class="hol-tag">' + HOLIDAY_KINDS[hol].label + '</span>' : '') +
+      (avail ? '<span class="fill">' + fill + '/' + avail + '</span>' : '') +
+      '</div>' + slots + '</div>';
   }
   grid.innerHTML = html;
 }
@@ -488,7 +592,7 @@ function attachDnd() {
     el.addEventListener('dragend', onDragEnd);
   });
   // ドロップ先：空き枠
-  document.querySelectorAll('.cal-slot:not(.filled)').forEach(function (el) {
+  document.querySelectorAll('.cal-slot:not(.filled):not(.blocked)').forEach(function (el) {
     el.addEventListener('dragover', function (e) { if (dndState) { e.preventDefault(); el.classList.add('drop-ok'); } });
     el.addEventListener('dragleave', function () { el.classList.remove('drop-ok'); });
     el.addEventListener('drop', function (e) {
@@ -546,7 +650,7 @@ var undoSnapshot = null;
 var toastTimer = null;
 
 function snapshotUndo() {
-  undoSnapshot = JSON.stringify(appData.placements);
+  undoSnapshot = JSON.stringify({ placements: appData.placements, holidays: appData.holidays });
 }
 function showToast(label) {
   var el = document.getElementById('toast');
@@ -554,7 +658,9 @@ function showToast(label) {
   el.style.display = 'flex';
   document.getElementById('undo-btn').onclick = function () {
     if (undoSnapshot) {
-      appData.placements = JSON.parse(undoSnapshot);
+      var snap = JSON.parse(undoSnapshot);
+      appData.placements = snap.placements;
+      appData.holidays = snap.holidays;
       undoSnapshot = null;
       saveData();
       renderAll();
@@ -613,6 +719,10 @@ function tryPlace(userId, date, slot, type) {
   var mk = monthKeyOf(date);
   var list = appData.placements[mk] || [];
   if (!isSlotFree(list, date, slot)) return;
+  if (isSunday(date) || isSlotBlocked(appData.holidays, date, slot)) {
+    showInfoToast('休みの枠には配置できません');
+    return;
+  }
   if (type === 'monitoring' && hasMonitoringInMonth(list, userId)) {
     showInfoToast('今月のモニタリングは配置済みです。種別を変更してください');
     return;
@@ -635,6 +745,10 @@ function tryMove(source, target) {
   var p = findPlacement(list, source.date, source.slot);
   if (!p) return;
   if (!isSlotFree(list.filter(function (x) { return x !== p; }), target.date, target.slot)) return;
+  if (isSunday(target.date) || isSlotBlocked(appData.holidays, target.date, target.slot)) {
+    showInfoToast('休みの枠には移動できません');
+    return;
+  }
   var user = userById(p.userId);
   confirmNg(user, target.date, function (ok) {
     if (!ok) { renderAll(); return; }
@@ -772,7 +886,7 @@ function openPlacePopover(date, slot, anchorEl) {
   closePopover();
   if (!appData.users.length) { showInfoToast('先に利用者管理から登録してください'); return; }
   var list = curList();
-  var sorted = appData.users.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+  var sorted = appData.users.slice().sort(compareUsers);
   var selType = 'monitoring';
   var pop = document.createElement('div');
   pop.className = 'popover';
@@ -788,9 +902,7 @@ function openPlacePopover(date, slot, anchorEl) {
     '<div style="text-align:right"><button class="btn" id="pp-cancel">キャンセル</button> ' +
     '<button class="btn primary" id="pp-place">配置</button></div></div>';
   document.body.appendChild(pop);
-  var rect = anchorEl.getBoundingClientRect();
-  pop.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
-  pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  positionPopover(pop, anchorEl);
   bindTypeButtons(document.getElementById('pp-types'), function (t) { selType = t; });
   document.getElementById('pp-cancel').onclick = closePopover;
   document.getElementById('pp-place').onclick = function () {
@@ -819,9 +931,7 @@ function openDetail(date, slot, anchorEl) {
     '<button class="btn" id="dp-pool">配置を取り消す</button></div>' +
     '<div style="text-align:right"><button class="btn" id="dp-close">閉じる</button></div></div>';
   document.body.appendChild(pop);
-  var rect = anchorEl.getBoundingClientRect();
-  pop.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
-  pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+  positionPopover(pop, anchorEl);
   document.getElementById('dp-time').onchange = function (e) {
     p.time = e.target.value || p.time;
     saveData();
@@ -854,6 +964,70 @@ function closePopover() {
   var el = document.getElementById('detail-popover');
   if (el) el.remove();
 }
+function positionPopover(pop, anchorEl) {
+  var rect = anchorEl.getBoundingClientRect();
+  pop.style.left = Math.min(rect.left, window.innerWidth - 240) + 'px';
+  pop.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+}
+
+/* ===== 休日（休み・AM休・PM休）ポップオーバー ===== */
+function openHolidayPopover(date, anchorEl) {
+  if (reserveMode || selectMode) return;
+  closePopover();
+  var cur = holidayKindOf(appData.holidays, date);
+  var pop = document.createElement('div');
+  pop.className = 'popover';
+  pop.id = 'detail-popover';
+  pop.innerHTML = '<div class="name">' + Number(date.slice(5, 7)) + '/' + Number(date.slice(8, 10)) +
+    '（' + DOW_LABELS[dayOfWeek(date)] + '）を休みにする</div>' +
+    '<div class="rows"><div class="type-btns">' +
+    Object.keys(HOLIDAY_KINDS).map(function (k) {
+      return '<button class="btn hol-btn' + (k === cur ? ' active' : '') + '" data-kind="' + k + '">' +
+        HOLIDAY_KINDS[k].label + '</button>';
+    }).join('') + '</div>' +
+    '<div style="text-align:right"><button class="btn" id="hp-clear"' + (cur ? '' : ' disabled') +
+    '>休みを解除</button> <button class="btn" id="hp-close">閉じる</button></div></div>';
+  document.body.appendChild(pop);
+  positionPopover(pop, anchorEl);
+  pop.querySelectorAll('.hol-btn').forEach(function (b) {
+    b.onclick = function () { applyHoliday(date, b.dataset.kind); };
+  });
+  document.getElementById('hp-clear').onclick = function () { if (cur) applyHoliday(date, null); };
+  document.getElementById('hp-close').onclick = closePopover;
+}
+
+function applyHoliday(date, kind) {
+  closePopover();
+  var dayLabel = Number(date.slice(8, 10)) + '日';
+  if (!kind) {
+    if (!appData.holidays[date]) return;
+    snapshotUndo();
+    delete appData.holidays[date];
+    saveData();
+    renderAll();
+    showToast(dayLabel + 'の休みを解除しました');
+    return;
+  }
+  if (appData.holidays[date] === kind) return;
+  var conflicts = placementsBlockedBy(curList(), date, kind);
+  var commit = function () {
+    snapshotUndo();
+    if (conflicts.length) {
+      setCurList(curList().filter(function (x) { return conflicts.indexOf(x) === -1; }));
+    }
+    appData.holidays[date] = kind;
+    saveData();
+    renderAll();
+    showToast(dayLabel + 'を「' + HOLIDAY_KINDS[kind].label + '」にしました' +
+      (conflicts.length ? '（' + conflicts.length + '件をプールへ戻しました）' : ''));
+  };
+  if (!conflicts.length) { commit(); return; }
+  showChoice(dayLabel + 'を「' + HOLIDAY_KINDS[kind].label + '」にすると、\n' +
+    '入っている予定 ' + conflicts.length + '件 をプールへ戻します。\nよろしいですか？', [
+    { label: 'キャンセル', value: 'no' },
+    { label: '休みにする', value: 'yes', primary: true }
+  ]).then(function (v) { if (v === 'yes') commit(); });
+}
 
 /* ===== 利用者管理 ===== */
 var editingUserId = null;
@@ -871,10 +1045,11 @@ function closeUsersModal() {
 
 function renderUsersModal() {
   var listEl = document.getElementById('users-list');
-  var sorted = appData.users.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ja'); });
+  var sorted = appData.users.slice().sort(compareUsers);
   listEl.innerHTML = sorted.map(function (u) {
     return '<div class="user-row"><span class="name">' + escapeHtml(u.name) + 'さん</span>' +
-      '<span class="meta">' + (u.ngDays.length ? ngBadgeText(u) + ' ' : '') + escapeHtml(u.memo) + '</span>' +
+      '<span class="meta">' + (u.kana ? '（' + escapeHtml(u.kana) + '） ' : '') +
+      (u.ngDays.length ? ngBadgeText(u) + ' ' : '') + escapeHtml(u.memo) + '</span>' +
       '<button class="btn" data-edit="' + u.id + '">編集</button>' +
       '<button class="btn danger" data-del="' + u.id + '">削除</button></div>';
   }).join('') || '<div style="color:var(--text-2);font-size:13px">まだ登録がありません</div>';
@@ -887,6 +1062,7 @@ function renderUsersModal() {
   document.getElementById('form-title').textContent =
     editingUserId === null ? '新規登録' : userById(editingUserId).name + 'さんを編集中';
   document.getElementById('uf-name').value = editingUserId === null ? '' : userById(editingUserId).name;
+  document.getElementById('uf-kana').value = editingUserId === null ? '' : userById(editingUserId).kana;
   document.getElementById('uf-memo').value = editingUserId === null ? '' : userById(editingUserId).memo;
   document.getElementById('uf-cancel').style.display = editingUserId === null ? 'none' : 'inline-block';
 }
@@ -896,12 +1072,13 @@ function saveUserForm() {
   if (!name) { alert('名前を入力してください'); return; }
   var ngDays = Array.prototype.slice.call(
     document.querySelectorAll('#uf-ng input:checked')).map(function (el) { return Number(el.value); });
+  var kana = document.getElementById('uf-kana').value.trim();
   var memo = document.getElementById('uf-memo').value.trim();
   if (editingUserId === null) {
-    appData.users.push({ id: appData.nextId++, name: name, ngDays: ngDays, memo: memo });
+    appData.users.push({ id: appData.nextId++, name: name, kana: kana, ngDays: ngDays, memo: memo });
   } else {
     var u = userById(editingUserId);
-    u.name = name; u.ngDays = ngDays; u.memo = memo;
+    u.name = name; u.kana = kana; u.ngDays = ngDays; u.memo = memo;
   }
   editingUserId = null;
   saveData();
@@ -952,8 +1129,7 @@ function importJson(file) {
     var r = sanitizeData(raw);
     appData = r.data;
     editingUserId = null;
-    if (r.migratedPooled) showBanner('⚠ 旧形式のデータを新しい枠割りに移行しました（' + r.migratedPooled + '件はプールに戻しました）');
-    else if (r.warned) showBanner('⚠ インポートデータの一部を修復しました');
+    showMigrationBanner(r, 'インポートデータの一部を修復しました');
     saveData();
     renderUsersModal();
     renderAll();
@@ -977,7 +1153,7 @@ function maybeInitMonth() {
   var buttons = [];
   var text = viewMonth + '月の配置をどうしますか？\n';
   if (prevList.length) {
-    var preview = copyFromPrevMonth(prevList, existing, appData.users, mk);
+    var preview = copyFromPrevMonth(prevList, existing, appData.users, mk, appData.holidays);
     var placed = preview.placements.length - existing.length;
     text += '「前月コピー」: ' + placed + '名を前月と同じ日・枠で配置' +
       (preview.pooled.length ? '（' + preview.pooled.length + '名はプールへ）' : '') +
@@ -988,7 +1164,7 @@ function maybeInitMonth() {
   buttons.push({ label: 'まっさら', value: 'blank', primary: !prevList.length });
   showChoice(text, buttons).then(function (v) {
     if (v === 'copy') {
-      var r = copyFromPrevMonth(prevList, existing, appData.users, mk);
+      var r = copyFromPrevMonth(prevList, existing, appData.users, mk, appData.holidays);
       appData.placements[mk] = r.placements;
     }
     // 'blank' は既存予約を保持したまま何もしない（4.4）
@@ -1041,8 +1217,11 @@ function init() {
   document.getElementById('cal-grid').onclick = function (e) {
     var check = e.target.closest('.check');
     if (check) { toggleDone(check.dataset.date, Number(check.dataset.slot)); return; }
+    var head = e.target.closest('.day-head[data-holhead]');
+    if (head) { openHolidayPopover(head.dataset.date, head); return; }
     var slotEl = e.target.closest('.cal-slot');
     if (!slotEl) { closePopover(); return; }
+    if (slotEl.classList.contains('blocked')) { closePopover(); return; }
     var date = slotEl.dataset.date, slot = Number(slotEl.dataset.slot);
     var filled = slotEl.classList.contains('filled');
     if (reserveMode && !filled) {

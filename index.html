@@ -9,7 +9,7 @@
   --bg: #F8FAFC; --card: #FFFFFF; --accent: #2563EB;
   --text: #0F172A; --text-2: #64748B; --line: #E2E8F0;
   --visit: #0C9E8E; --done-bg: #F1F5F9; --ng: #E03F3F; --warn-bg: #FEF3C7;
-  --type-mon: #7C3AED; --type-meet: #D93025; --type-other: #3B50A0;
+  --type-mon: #7C3AED; --type-meet: #D93025; --type-other: #188038;
   --holiday: #B45309; --holiday-bg: #F5F5F4;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -52,7 +52,14 @@ main { display: grid; grid-template-columns: 340px 1fr; gap: 10px;
 .cal-cell .day-head:hover { background: var(--done-bg); }
 .cal-cell .day-head .fill { color: var(--accent); margin-left: auto; }
 .cal-cell .day-head .hol-tag { color: var(--holiday); font-weight: 700; }
-.cal-cell.today .day-num { color: var(--accent); font-weight: 700; }
+/* 日付は押せる＝ボタンの形で常時見せる（マウスを載せるまで気づけなかったため） */
+.cal-cell .day-head .day-num { display: inline-flex; align-items: center; justify-content: center;
+  min-width: 20px; height: 18px; padding: 0 4px; font-size: 12px; font-weight: 600;
+  border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--text); }
+.cal-cell .day-head:hover .day-num { border-color: var(--accent); color: var(--accent); }
+.cal-cell.today .day-num { color: var(--accent); font-weight: 700;
+  border-color: var(--accent); background: #EFF6FF; }
+.cal-hint { font-size: 11px; color: var(--text-2); padding: 2px 2px 5px; }
 .cal-slot { border: 1px dashed var(--line); border-radius: 6px; margin-top: 2px;
   min-height: 22px; font-size: 12px; display: flex; align-items: center;
   padding: 1px 4px; color: var(--text-2); }
@@ -151,6 +158,7 @@ main { display: grid; grid-template-columns: 340px 1fr; gap: 10px;
     <div id="pool-list"></div>
   </aside>
   <section id="calendar">
+    <p class="cal-hint">※ 日付の数字をクリックすると、その日を休み（休み／AM休／PM休）にできます</p>
     <div class="cal-grid" id="cal-grid"></div>
   </section>
 </main>
@@ -187,7 +195,7 @@ var SLOT_LABELS = ['午前①', '午前②', '午後①', '午後②'];
 var TYPES = {
   monitoring: { label: 'モニタ', color: '#7C3AED' },
   meeting:    { label: '会議',   color: '#D93025' },
-  other:      { label: '他',     color: '#3B50A0' }
+  other:      { label: '他',     color: '#188038' }
 };
 var HOLIDAY_KINDS = {
   full: { label: '休み',  slots: [1, 2, 3, 4] },

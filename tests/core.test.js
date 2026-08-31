@@ -48,7 +48,7 @@ test('定数: SLOT_TIMES / SLOT_LABELS / TYPES', () => {
   assert.deepStrictEqual(core.TYPES, {
     monitoring: { label: 'モニタ', color: '#7C3AED' },
     meeting:    { label: '会議',   color: '#D93025' },
-    other:      { label: '他',     color: '#3B50A0' }
+    other:      { label: '他',     color: '#188038' }
   });
 });
 
@@ -422,9 +422,9 @@ test('sanitizeData：v1 データにも holidays が生える（空）', () => {
   assert.strictEqual(r.data.version, 3);
 });
 
-test('種別の色：会議は赤・その他は紺', () => {
+test('種別の色：会議は赤・その他は緑', () => {
   assert.strictEqual(core.TYPES.meeting.color, '#D93025');
-  assert.strictEqual(core.TYPES.other.color, '#3B50A0');
+  assert.strictEqual(core.TYPES.other.color, '#188038');
   assert.strictEqual(core.TYPES.monitoring.color, '#7C3AED');
 });
 
